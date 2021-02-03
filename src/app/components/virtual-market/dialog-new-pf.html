@@ -1,0 +1,12 @@
+<form>
+    <mat-form-field>
+        <mat-label>Portfolio Name</mat-label>
+        <input matInput (keyup)='data.portfolioName=$event.target.value'>
+    </mat-form-field>
+    <!-- <mat-form-field>
+        <mat-label>Cost/Share</mat-label>
+        <input matInput (keyup)='newInvestment.inv_stock_cost_per_share=$event.target.value'>
+    </mat-form-field> -->
+    
+</form>
+<button type="submit" mat-stroked-button (click)="addNewPF(data.portfolioName)">Add</button>

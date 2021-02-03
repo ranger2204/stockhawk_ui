@@ -1,0 +1,47 @@
+
+<mat-grid-list cols="4" rowHeight="100px">
+  <mat-grid-tile
+      colspan='4'
+      rowspan='2'
+      style = "border-bottom: solid 1px #888888;"
+    >
+    
+    <form class="stock-search-form">
+      <mat-form-field>
+        <mat-label>Stock Name</mat-label>
+        <input type="text"
+            placeholder="Pick one"
+            aria-label="Number"
+            matInput
+            [formControl]="stockListControl"
+            [matAutocomplete]="auto">
+        <mat-autocomplete #auto="matAutocomplete">
+          <mat-option *ngFor="let stock of stockList" [value]="stock">
+            {{stock}}
+          </mat-option>
+        </mat-autocomplete>
+      </mat-form-field>
+    </form>
+
+
+    
+
+
+    
+  </mat-grid-tile>
+  <mat-grid-tile
+      colspan='2'
+      rowspan='1'
+      style = "border-right: solid 1px #888888;"
+    >
+    Value Picks
+  </mat-grid-tile>
+  <mat-grid-tile
+      colspan='2'
+      rowspan='1'
+    >
+    Events
+  </mat-grid-tile>
+  
+
+</mat-grid-list>

@@ -1,0 +1,26 @@
+<mat-grid-list cols="4" rowHeight="100px">
+  <mat-grid-tile
+      colspan='2'
+      rowspan='1'
+    >
+    <mat-toolbar color="primary">
+      <h2>StockHawk</h2>
+    </mat-toolbar>
+    
+  </mat-grid-tile>
+  <mat-grid-tile
+      colspan='2'
+      rowspan='1'
+    >
+    <nav mat-tab-nav-bar>
+      <a mat-tab-link  routerLink="/analytics" routerLinkActive="is-active">Analytics</a>
+      <a mat-tab-link  routerLink="/virtualmarket" routerLinkActive="is-active">Virtual Market</a>
+      <a mat-tab-link  routerLink="/holdings" routerLinkActive="is-active">Holdings</a>
+    </nav>
+  </mat-grid-tile>
+  
+
+</mat-grid-list>
+
+
+<router-outlet></router-outlet>
