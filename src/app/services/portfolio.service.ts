@@ -78,14 +78,13 @@ export class PortfolioService {
     })
   }
 
-  getPriceHistoryForPortfolio(portfolioId){
+  getPriceHistoryForPortfolio(portfolioId, lookBack=120){
     return this.http.get(`${environment.baseUrl}/api/portfolio/trend`, {
       params: {
         'pid': portfolioId,
-        'lb': '120'
+        'lb': lookBack.toString()
       }
     })
   }
-
 
 }
