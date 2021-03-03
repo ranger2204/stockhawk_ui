@@ -18,6 +18,12 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatTableModule } from '@angular/material/table';
+import { MatCardModule } from '@angular/material/card';
+import { MatBadgeModule } from '@angular/material/badge';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import {MatCheckboxModule} from '@angular/material/checkbox';
+import {MatListModule} from '@angular/material/list';
+import {MatSortModule} from '@angular/material/sort';
 
 import { AnalyticsComponent } from './components/analytics/analytics.component';
 import { VirtualMarketComponent } from './components/virtual-market/virtual-market.component';
@@ -28,20 +34,26 @@ import { StockService } from './services/stock.service';
 
 import { Investment } from './models/Investment'
 
+import { FilterPipe } from './pipes/filter.pipe'; 
+
 @NgModule({
   declarations: [
     AppComponent,
     AnalyticsComponent,
     VirtualMarketComponent,
     HoldingsComponent,
-    DialogNewPF
+    DialogNewPF,
+    FilterPipe
   ],
   imports: [
     BrowserModule,
     AppRoutingModule,
     BrowserAnimationsModule,
     HttpClientModule,
-    
+
+    MatSortModule,
+    MatCheckboxModule,
+    MatListModule,
     MatGridListModule,
     MatSelectModule,
     MatToolbarModule,
@@ -54,7 +66,10 @@ import { Investment } from './models/Investment'
     MatInputModule,
     FormsModule,
     ReactiveFormsModule,
-    MatDialogModule
+    MatDialogModule,
+    MatCardModule,
+    MatBadgeModule,
+    MatProgressBarModule
   ],
   providers: [
     PortfolioService,

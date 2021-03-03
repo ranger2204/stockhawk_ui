@@ -6,6 +6,7 @@ import { HoldingsComponent } from './components/holdings/holdings.component';
 import { VirtualMarketComponent } from './components/virtual-market/virtual-market.component'
 
 const routes: Routes = [
+  {path: '', component:AnalyticsComponent},
   {path: 'analytics', component:AnalyticsComponent},
   {path: 'virtualmarket', component:VirtualMarketComponent},
   {path: 'holdings', component:HoldingsComponent}
