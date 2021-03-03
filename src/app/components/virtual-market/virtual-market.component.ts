@@ -13,16 +13,30 @@ import { Investment } from '../../models/Investment'
 export class VirtualMarketComponent implements OnInit {
 
   portfolios = [];
+  historyLB = 30;
+
   activePortfolio = undefined;
   portfolioDetails = undefined;
   investmentDetails = [];
+  
+
   stockDetails = [];
+  dealDetails = [];
+  divDetails = [];
+  agmDetails = [];
+  bmDetails = [];
+  insDetails = [];
+  brDetails = [];
+
   stockAutoCompleteList = [];
   stockAutoCompleteTO = undefined;
-  displayedColumns = ['stock_name', 'quantity', 'perSharePriceCost', 'perSharePriceCurrent', 'cost', 'market_value', 'pL', 'change', '5yfd', 'action']
+  displayedColumnsPortfolio = ['stock_name', 'quantity', 'perSharePriceCost', 'perSharePriceCurrent', 'cost', 'market_value', 'pL', 'change', '5yfd', 'remarks', 'action']
+  displayedColumnsDeals = ['dealStock', 'dealType', 'dealTitle', 'dealTransType', 'dealQty', 'dealPrice']
   stockPriceHistory = {}
 
   currentPFStockValue = []
+  refreshInProgress = false;
+  currentProgress = 0;
 
 
   constructor(
@@ -43,20 +57,46 @@ export class VirtualMarketComponent implements OnInit {
     })
   }
 
+  getLen(objList){
+    return objList.length
+  }
+
+  getProfitOnly(){
+    let total = 0
+    for(let inv of this.investmentDetails){
+      let stk_obj = this.getStockFromId(inv.inv_stock_id)
+      if(inv.inv_stock_cost_price < stk_obj.stock_latest_price){
+        total += (stk_obj.stock_latest_price - inv.inv_stock_cost_price) * inv.inv_stock_qty
+      }
+    }
+    return Number(total.toFixed(2))
+  }
+
   changePortfolio(portfolioId) {
     if (!isNaN(portfolioId)) {
       this.activePortfolio = parseInt(portfolioId);
       console.log(`Portfolio changed to ${this.activePortfolio}`);
 
       this.portfolioService.getPortfolioById(this.activePortfolio).subscribe(data => {
-        console.log(data)
+        // console.log(data)
         this.portfolioDetails = data['portfolio']
-        this.investmentDetails = data['investments']
         this.stockDetails = data['stocks']
-        this.getPriceHistoryForPortfolio(this.activePortfolio)
+        this.investmentDetails = this.aggInvestment(data['investments']);
+        // console.table(this.investmentDetails)
+        // console.table(this.stockDetails)
+        this.getPriceHistoryForPortfolio(this.activePortfolio, this.historyLB);
+        this.getDeals();
+        this.getDividends();
+        this.getAGM();
+        this.getBM();
+        this.getInsider();
+        this.getBrokRes();
+
+        
       })
     }
   }
+
 
   removeAPF() {
     this.portfolioService.removePortfolioById(this.activePortfolio).subscribe(data => {
@@ -83,8 +123,9 @@ export class VirtualMarketComponent implements OnInit {
     }
   }
 
-  roundFloat(floatValue) {
-    return Number((floatValue).toFixed(2));
+  roundFloat(floatValue: Number) {
+
+    return Number((floatValue).toFixed(2)).toLocaleString();
   }
 
   getStockList(event) {
@@ -101,7 +142,20 @@ export class VirtualMarketComponent implements OnInit {
     )
   }
 
+  split(sepString: string, sep=','){
+    if(sepString === null)
+      return []
+
+    // console.log(sepString.split(sep))
+    return sepString.split(sep)
+  }
+
+  trim(tag:string){
+    return tag.trim()
+  }
+
   addInvestment() {
+    // console.log(this.newInvestment)
     this.portfolioService.addNewInvestment(this.activePortfolio, this.newInvestment).subscribe(data => {
       console.log(`Investment ID :${data['investment_id']}`)
       this.changePortfolio(this.activePortfolio)
@@ -113,6 +167,30 @@ export class VirtualMarketComponent implements OnInit {
       console.log(`Investment ID :${data['investment_id']}`)
       this.changePortfolio(this.activePortfolio)
     })
+  }
+
+  aggInvestment(investmentDetails){
+    let investments = [];
+
+    let updateInvestment = (list, inv) => {
+      for(let i=0; i<list.length; i++){
+        if(list[i].inv_stock_id == inv.inv_stock_id){
+          list[i].inv_id = inv.inv_id;
+          list[i].inv_stock_cost_price = (inv.inv_stock_cost_price*inv.inv_stock_qty + list[i].inv_stock_cost_price*list[i].inv_stock_qty)/(list[i].inv_stock_qty + inv.inv_stock_qty);
+          list[i].inv_stock_qty = list[i].inv_stock_qty + inv.inv_stock_qty;
+          list[i].inv_remarks = inv.inv_remarks
+          return list
+        }
+      }
+      list.push(inv)
+      return list
+    }
+
+    for(let i=0; i<investmentDetails.length; i++){
+      let inv = investmentDetails[i]
+      investments = updateInvestment(investments, inv)
+    }
+    return investments
   }
 
   removeInvestment(investmentId) {
@@ -132,6 +210,25 @@ export class VirtualMarketComponent implements OnInit {
     });
   }
 
+  getStockFromId(stockId){
+    // console.table(this.stockDetails)
+    for(let stock of this.stockDetails)
+      if(stock.stock_id == stockId)
+        return stock
+  }
+    
+  updateStockDetails(){
+    this.refreshInProgress = true;
+    this.stockService.updateStockDetails(this.stockDetails).subscribe(data =>{
+      this.changePortfolio(this.activePortfolio)
+      this.refreshInProgress = false;
+    },
+    error => {
+      this.refreshInProgress = false;
+      console.log(`Error : ${error}`)
+    });
+  }
+
   getRandomColors(inColors: Array<string>){
     var letters = '0123456789ABCDEF';
     var color = '#';
@@ -146,68 +243,209 @@ export class VirtualMarketComponent implements OnInit {
     }
   }
 
+  getBrokRes(){
+    this.brDetails = []
+    if(this.stockDetails.length > 0)
+      this.stockService.getBrokResforStocks(this.stockDetails).subscribe(data => {
+        // console.table(data['deals'])
+        this.brDetails = data['broker-research']
+      })
+  }
 
-  getPriceHistoryForPortfolio(portfolioId) {
-    this.portfolioService.getPriceHistoryForPortfolio(portfolioId).subscribe(data => {
+  getAGM(){
+    this.agmDetails = []
+    if(this.stockDetails.length > 0)
+      this.stockService.getAGMforStocks(this.stockDetails).subscribe(data => {
+        // console.table(data['deals'])
+        this.agmDetails = data['agm']
+      })
+  }
+
+  getDeals(){
+    this.dealDetails = []
+    if(this.stockDetails.length > 0)
+      this.stockService.getDealsforStocks(this.stockDetails).subscribe(data => {
+        // console.table(data['deals'])
+        this.dealDetails = data['deals']
+
+      })
+  }
+
+  getInsider(){
+    this.insDetails = []
+    if(this.stockDetails.length > 0)
+      this.stockService.getInsforStocks(this.stockDetails).subscribe(data => {
+        // console.table(data['deals'])
+        this.insDetails = data['insider']
+      })
+  }
+
+  getBM(){
+    this.bmDetails = []
+    if(this.stockDetails.length > 0)
+      this.stockService.getBMforStocks(this.stockDetails).subscribe(data => {
+        // console.table(data['deals'])
+        this.bmDetails = data['bm']
+      })
+  }
+
+  getDividends(){
+    this.divDetails = []
+    if(this.stockDetails.length > 0)
+      this.stockService.getDividendForStocks(this.stockDetails).subscribe(data => {
+        // console.table(data['dividends'])
+        this.divDetails = data['dividends']
+      })
+  }
+
+  changePriceHistory(lookBack){
+    this.historyLB = lookBack;
+    this.getPriceHistoryForPortfolio(this.activePortfolio, lookBack);
+  }
+
+  getPriceHistoryForPortfolio(portfolioId, lookBack=30) {
+    this.portfolioService.getPriceHistoryForPortfolio(portfolioId, lookBack).subscribe(data => {
       let priceHistory: any = data['price_history'];
-      console.log(priceHistory)
+      // console.log(priceHistory)
       let stockIds = Object.keys(priceHistory)
       stockIds.forEach(stockId => {
         this.stockPriceHistory[stockId] = priceHistory[stockId]
       })
       this.currentPFStockValue = []
       let inColors = []
+      // let firstSelected = true;
+      let totalLive = [];
+      let totalFixed = [];
+
+      let updateTotal = (list, date, value) => {
+        for(let i=0; i<list.length; i++){
+          if(list[i][0] == date){
+            list[i][1] += value
+            return list
+          }
+        }
+        
+        list.push([date, value])
+        return  list
+      }
+
       this.investmentDetails.forEach((investment, index) => {
-        let data_live = []
-        let data_fixed = []
+        let dataLive = []
+        let dataFixed = []
         this.stockPriceHistory[investment.inv_stock_id].forEach(ph => {
-          data_live.push(
+          dataLive.push(
             [
               Date.parse(ph.stock_price_date),
               investment.inv_stock_qty * ph.stock_price_close,
               // investment.inv_stock_qty * investment.inv_stock_cost_per_share
             ]
           )
-          data_fixed.push(
+          dataFixed.push(
             [
               Date.parse(ph.stock_price_date),
               investment.inv_stock_qty * investment.inv_stock_cost_price
             ]
           )
           
+          totalFixed = updateTotal(
+            totalFixed, Date.parse(ph.stock_price_date), 
+            investment.inv_stock_qty * investment.inv_stock_cost_price
+          )
+
+          totalLive = updateTotal(
+            totalLive, Date.parse(ph.stock_price_date), 
+            investment.inv_stock_qty * ph.stock_price_close
+          )
+
         });
 
         let color = this.getRandomColors(inColors)
         inColors.push(color)
         this.currentPFStockValue.push({
-          'name': this.stockDetails[index].stock_name,
-          'data': data_live,
+          'name': this.getStockFromId(investment.inv_stock_id).stock_name,
+          'data': dataLive,
           'color': color,
-          'selected': true
+          // 'visible': firstSelected?true:false
+          'visible': false
         })
 
         this.currentPFStockValue.push({
-          'name': this.stockDetails[index].stock_name+'_INV',
+          'name': this.getStockFromId(investment.inv_stock_id).stock_name+' (Cost)',
           'showInLegend': false,  
-          'data': data_fixed,
+          'data': dataFixed,
           'color': color,
-          'dashStyle': 'dash',
+          'dashStyle': 'Dot',
           'linkedTo': ':previous',
+          // 'visible': firstSelected?true:false
+          'visible': false
         })
+        // firstSelected = false;
 
       });
+
+      let color = this.getRandomColors(inColors)
+      this.currentPFStockValue.push({
+        'name': 'Total',
+        'data': totalLive,
+        'color': color,
+      })
+
+      this.currentPFStockValue.push({
+        'name': 'Total (Cost)',
+        'data': totalFixed,
+        'color': color,
+        'linkedTo': ':previous',
+        'dashStyle': 'Dot'
+      })
+
       this.drawPortfolioTrend()
 
     })
   }
 
   calculateCI(startPrice, years=5, rate=10){
-    return Math.round(startPrice*Math.pow((1+rate/100), years) - startPrice);
+    return Math.round(startPrice*Math.pow((1+rate/100), years) - startPrice).toLocaleString();
+  }
+
+  updateAllStocks(){
+    this.refreshInProgress = true;
+
+    this.stockService.getAllStocksDetails().subscribe( async data => {
+      let stocks = data['stocks'];
+      // console.table(stocks)
+      let stockChunk = []
+      let chunkSize = 10
+      let currentChunkIndex = 0
+
+      for(let stock of stocks){
+        stockChunk.push(stock)
+        if(stockChunk.length == chunkSize){
+          await this.stockService.updateStockDetails(stockChunk).toPromise();
+          stockChunk = []
+          currentChunkIndex += 1
+          this.currentProgress = currentChunkIndex * 100 / (stocks.length/chunkSize)
+        }
+      }
+
+      if(stockChunk.length > 0){
+        await this.stockService.updateStockDetails(stockChunk).toPromise();
+      }
+
+      this.refreshInProgress = false
+    },
+    error => {
+      this.refreshInProgress = false;
+      console.log(`Error : ${error}`)
+    })
+  }
+
+  toLocalString(value: Number){
+    return value.toLocaleString()
   }
 
   drawPortfolioTrend() {
 
-    console.log(this.currentPFStockValue)
+    // console.log(this.currentPFStockValue)
     let chartOptions = {
       title: {
         text: 'Portfolio Trend'
@@ -243,7 +481,6 @@ export class VirtualMarketComponent implements OnInit {
       series: this.currentPFStockValue
     }
   
-
     Highcharts.chart('portfolio-trend', chartOptions as Highcharts.Options)
   }
 }

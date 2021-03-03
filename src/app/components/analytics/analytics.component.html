@@ -1,47 +1,414 @@
+<div class="container-fluid">
+  <div class="row" *ngIf="refreshInProgress">
+    <mat-progress-bar class="mb-3" mode="determinate" value="{{currentProgress}}"></mat-progress-bar>
+  </div>
+  <div class="row">
+    <div class="col-4">
 
-<mat-grid-list cols="4" rowHeight="100px">
-  <mat-grid-tile
-      colspan='4'
-      rowspan='2'
-      style = "border-bottom: solid 1px #888888;"
-    >
-    
-    <form class="stock-search-form">
+        <mat-form-field class="w-100">
+          <mat-label>Stock Name</mat-label>
+          <input type="text" matInput [matAutocomplete]="auto" (keyup)="getStockList($event)" [value]="currentStock.stock_name">
+          <mat-autocomplete #auto="matAutocomplete">
+            <mat-option *ngFor="let stock of stockAutoCompleteList" [value]="stock.stock_name" 
+            (click)="currentStock=stock; getAnalytics();">
+              {{stock.stock_name}}
+            </mat-option>
+          </mat-autocomplete>
+        </mat-form-field>
+
+      
+    </div>
+    <div class="col-2">
       <mat-form-field>
-        <mat-label>Stock Name</mat-label>
-        <input type="text"
-            placeholder="Pick one"
-            aria-label="Number"
-            matInput
-            [formControl]="stockListControl"
-            [matAutocomplete]="auto">
-        <mat-autocomplete #auto="matAutocomplete">
-          <mat-option *ngFor="let stock of stockList" [value]="stock">
-            {{stock}}
-          </mat-option>
-        </mat-autocomplete>
+        <mat-label>History</mat-label>
+        <mat-select value=30 (selectionChange)="changePriceHistory($event.value)">
+            <mat-option value="30">30</mat-option>
+            <mat-option value="60">60</mat-option>
+            <mat-option value="120">120</mat-option>
+            <mat-option value="180">180</mat-option>
+            <mat-option value="240">240</mat-option>
+            <!-- <mat-option value="365">365</mat-option> -->
+        </mat-select>
       </mat-form-field>
-    </form>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-4">
+      <div id="bank-quarter"></div>
+      <div id="non-bank-quarter"></div>
+    </div>
 
-
+    <div class="col-8">
+      <div id="price-history"></div>
+      <div id="competition"></div>
+    </div>
+  </div>
+  <!-- <div class="row">
+    <div class="col-12">
+      
+    </div>
+  </div> -->
+  <hr>
+  <div class="row">
+    <div class="col-12">
+      <h2>Value Picks</h2>
+      <div class="row">
+        <div class="col-6 card w-50" id="deals-distribution-buy"></div>
+        <!-- <div class="col-6 card w-50" id="deals-distribution-sell"></div> -->
+        <div class="col-6 card w-50" id="br-distribution-buy"></div>
+      </div>
+      <!-- <div class="row">
+        <div class="col-6 card w-50" id="br-distribution-buy"></div>
+        <div class="col-6 card w-50" id="deals-distribution-sell"></div>
+      </div> -->
     
+    </div>
+  </div>
+  <hr>
+  <div class="row">
+    <div class="col-12">
+      <h2>Events 
+        <button mat-icon-button color="accent" (click)="updateAllStocks()" [disabled]='refreshInProgress' title="Update DB">
+          <mat-icon [class.fa-rotate]='refreshInProgress'>autorenew</mat-icon>
+        </button>
+      </h2>
+      <mat-form-field class="example-full-width">
+        <mat-label>Search</mat-label>
+        <input matInput placeholder="Company" (keyup)="eventKW=$event.target.value">
+        
+      </mat-form-field>
+      
+      <details class="card">
+        <summary class="card-header">
+
+          Deals <span class="badge badge-primary">{{getLen(dealDetails | appFilter: eventKW : allStocks : 'deal_stock_id')}}</span>
+
+        </summary>
+        
+        <div class="card-body flex" style="max-height: 400px; overflow-y: auto;">
+          
+            <table mat-table [dataSource]="(dealDetails | appFilter: eventKW : allStocks : 'deal_stock_id')" class="mat-elevation-z8">
+
+              <ng-container matColumnDef="stockName">
+                <th mat-header-cell *matHeaderCellDef> Stock </th>
+                <td mat-cell *matCellDef="let element"> {{getStockFromId(element.deal_stock_id).stock_name}} </td>
+              </ng-container>
+            
+              <ng-container matColumnDef="dealType">
+                <th mat-header-cell *matHeaderCellDef> Type </th>
+                <td mat-cell *matCellDef="let element"> {{element.deal_type}} </td>
+              </ng-container>
+            
+
+              <ng-container matColumnDef="dealTransType">
+                <th mat-header-cell *matHeaderCellDef> Trans </th>
+                <td mat-cell *matCellDef="let element"> {{element.deal_trans_type}} </td>
+              </ng-container>
+            
+
+              <ng-container matColumnDef="dealTitle">
+                <th mat-header-cell *matHeaderCellDef> Title </th>
+                <td mat-cell *matCellDef="let element"> {{element.deal_title}} </td>
+              </ng-container>
+
+              <ng-container matColumnDef="dealQty">
+                <th mat-header-cell *matHeaderCellDef> Qty </th>
+                <td mat-cell *matCellDef="let element"> {{element.deal_qty}} </td>
+              </ng-container>
+
+              <ng-container matColumnDef="dealPrice">
+                <th mat-header-cell *matHeaderCellDef> Price </th>
+                <td mat-cell *matCellDef="let element"> {{element.deal_price}} </td>
+              </ng-container>
+
+              <ng-container matColumnDef="dealDate">
+                <th mat-header-cell *matHeaderCellDef> Date </th>
+                <td mat-cell *matCellDef="let element"> {{element.deal_date}} </td>
+              </ng-container>
+            
+              <tr mat-header-row *matHeaderRowDef="displayedColumns['deals']"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns['deals'];"></tr>
+
+            </table>
+
+        </div>
+
+      </details>
+
+      <details class="card">
+        <summary class="card-header">
+          Insider <span class="badge badge-primary">{{getLen(insDetails | appFilter: eventKW : allStocks : 'ins_stock_id')}}</span>
+        </summary>
+        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+          <table mat-table [dataSource]="(insDetails | appFilter: eventKW : allStocks : 'ins_stock_id')" class="mat-elevation-z8">
+
+            <ng-container matColumnDef="stockName">
+              <th mat-header-cell *matHeaderCellDef> Stock </th>
+              <td mat-cell *matCellDef="let element"> {{getStockFromId(element.ins_stock_id).stock_name}} </td>
+            </ng-container>
+          
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef> Insider </th>
+              <td mat-cell *matCellDef="let element"> {{element.ins_name}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="category">
+              <th mat-header-cell *matHeaderCellDef> Category </th>
+              <td mat-cell *matCellDef="let element"> {{element.ins_category}} </td>
+            </ng-container>
+          
+
+            <ng-container matColumnDef="transactionDate">
+              <th mat-header-cell *matHeaderCellDef> Transaction Date </th>
+              <td mat-cell *matCellDef="let element"> {{element.ins_date}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="qty">
+              <th mat-header-cell *matHeaderCellDef> Qty </th>
+              <td mat-cell *matCellDef="let element"> {{element.ins_qty}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="price">
+              <th mat-header-cell *matHeaderCellDef> Price </th>
+              <td mat-cell *matCellDef="let element"> {{element.ins_price}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="action">
+              <th mat-header-cell *matHeaderCellDef> Action </th>
+              <td mat-cell *matCellDef="let element"> {{element.ins_action}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="mode">
+              <th mat-header-cell *matHeaderCellDef> Mode </th>
+              <td mat-cell *matCellDef="let element"> {{element.ins_mode}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="holding">
+              <th mat-header-cell *matHeaderCellDef> Post Holding </th>
+              <td mat-cell *matCellDef="let element"> {{element.ins_post_per_hold}} </td>
+            </ng-container>
+          
+            <tr mat-header-row *matHeaderRowDef="displayedColumns['insider']"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns['insider'];"></tr>
+
+          </table>
+
+        </div>
+      </details>
+
+      <details class="card">
+        <summary class="card-header">
+          Broker Research <span class="badge badge-primary">{{getLen(brDetails | appFilter: eventKW : allStocks : 'brokres_stock_id')}}</span>
+        </summary>
+        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+          <table mat-table [dataSource]="(brDetails | appFilter: eventKW : allStocks : 'brokres_stock_id')" class="mat-elevation-z8">
+
+            <ng-container matColumnDef="stockName">
+              <th mat-header-cell *matHeaderCellDef> Stock </th>
+              <td mat-cell *matCellDef="let element"> {{getStockFromId(element.brokres_stock_id).stock_name}} </td>
+            </ng-container>
+          
+            <ng-container matColumnDef="organization">
+              <th mat-header-cell *matHeaderCellDef> Org </th>
+              <td mat-cell *matCellDef="let element"> {{element.brokres_org}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="flag">
+              <th mat-header-cell *matHeaderCellDef> Flag </th>
+              <td mat-cell *matCellDef="let element"> <a href="{{element.brokres_attachment}}">{{element.brokres_rec_flag}}</a> </td>
+            </ng-container>
+          
+
+            <ng-container matColumnDef="recDate">
+              <th mat-header-cell *matHeaderCellDef> Rec Date </th>
+              <td mat-cell *matCellDef="let element"> {{element.brokres_rec_date}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="recPrice">
+              <th mat-header-cell *matHeaderCellDef> Rec Price </th>
+              <td mat-cell *matCellDef="let element"> {{element.brokres_rec_price}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="targetPrice">
+              <th mat-header-cell *matHeaderCellDef> Target </th>
+              <td mat-cell *matCellDef="let element"> {{element.brokres_target}} </td>
+            </ng-container>  
+          
+            <tr mat-header-row *matHeaderRowDef="displayedColumns['br']"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns['br'];"></tr>
+
+          </table>
+
+        </div>
+      </details>
 
 
+      <details class="card">
+        <summary class="card-header">
+          Dividends <span class="badge badge-primary">{{getLen(divDetails | appFilter: eventKW : allStocks : 'div_stock_id')}}</span>
+        </summary>
+        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+          <table mat-table [dataSource]="(divDetails | appFilter: eventKW : allStocks : 'div_stock_id')" class="mat-elevation-z8">
+
+            <ng-container matColumnDef="stockName">
+              <th mat-header-cell *matHeaderCellDef> Stock </th>
+              <td mat-cell *matCellDef="let element"> {{getStockFromId(element.div_stock_id).stock_name}} </td>
+            </ng-container>
+          
+            <ng-container matColumnDef="divType">
+              <th mat-header-cell *matHeaderCellDef> Type </th>
+              <td mat-cell *matCellDef="let element"> {{element.div_type}} </td>
+            </ng-container>
+          
+
+            <ng-container matColumnDef="divEffectiveDate">
+              <th mat-header-cell *matHeaderCellDef> Effective Date </th>
+              <td mat-cell *matCellDef="let element"> {{element.div_eff_date}} </td>
+            </ng-container>
+          
+
+            <ng-container matColumnDef="divAnnoDate">
+              <th mat-header-cell *matHeaderCellDef> Annoucement Date </th>
+              <td mat-cell *matCellDef="let element"> {{element.div_anno_date}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="divRemarks">
+              <th mat-header-cell *matHeaderCellDef> Remarks </th>
+              <td mat-cell *matCellDef="let element"> {{element.div_remarks}} </td>
+            </ng-container>
+          
+            <tr mat-header-row *matHeaderRowDef="displayedColumns['dividends']"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns['dividends'];"></tr>
+
+          </table>
+
+        </div>
+      </details>
+
+      
+
+      <details class="card">
+        <summary class="card-header">
+          AGM <span class="badge badge-primary">{{getLen(agmDetails | appFilter: eventKW : allStocks : 'agm_stock_id')}}</span>
+        </summary>
+        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+          <table mat-table [dataSource]="agmDetails | appFilter: eventKW : allStocks : 'agm_stock_id'" class="mat-elevation-z8">
+
+            <ng-container matColumnDef="stockName">
+              <th mat-header-cell *matHeaderCellDef> Stock </th>
+              <td mat-cell *matCellDef="let element"> {{getStockFromId(element.agm_stock_id).stock_name}} </td>
+            </ng-container>
+          
+            <ng-container matColumnDef="agmPurpose">
+              <th mat-header-cell *matHeaderCellDef> Purpose </th>
+              <td mat-cell *matCellDef="let element"> {{element.agm_purpose}} </td>
+            </ng-container>
+          
+            <ng-container matColumnDef="agmDate">
+              <th mat-header-cell *matHeaderCellDef> AGM Date </th>
+              <td mat-cell *matCellDef="let element"> {{element.agm_date}} </td>
+            </ng-container>
+          
+            <ng-container matColumnDef="agmAnnoDate">
+              <th mat-header-cell *matHeaderCellDef> Annoucement Date </th>
+              <td mat-cell *matCellDef="let element"> {{element.agm_annoc_date}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="agmRemarks">
+              <th mat-header-cell *matHeaderCellDef> Remarks </th>
+              <td mat-cell *matCellDef="let element"> {{element.agm_remarks}} </td>
+            </ng-container>
+          
+            <tr mat-header-row *matHeaderRowDef="displayedColumns['agm']"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns['agm'];"></tr>
+
+          </table>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary class="card-header">
+          BM <span class="badge badge-primary">{{getLen(bmDetails | appFilter: eventKW : allStocks : 'bm_stock_id')}}</span>
+        </summary>
+        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+
+          <table mat-table [dataSource]="bmDetails | appFilter: eventKW : allStocks : 'bm_stock_id'" class="mat-elevation-z8">
+
+            <ng-container matColumnDef="stockName">
+              <th mat-header-cell *matHeaderCellDef> Stock </th>
+              <td mat-cell *matCellDef="let element"> {{getStockFromId(element.bm_stock_id).stock_name}} </td>
+            </ng-container>
+          
+            <ng-container matColumnDef="bmRemarks">
+              <th mat-header-cell *matHeaderCellDef> Remarks </th>
+              <td mat-cell *matCellDef="let element"> {{element.bm_remarks}} </td>
+            </ng-container>
+          
+            <ng-container matColumnDef="bmDate">
+              <th mat-header-cell *matHeaderCellDef> Date </th>
+              <td mat-cell *matCellDef="let element"> {{element.bm_date}} </td>
+            </ng-container>
+
+          
+            <tr mat-header-row *matHeaderRowDef="displayedColumns['bm']"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns['bm'];"></tr>
+
+          </table>
+
+        </div>
+      </details>
+
+    </div>
+  </div>
+
+  <div class="row">
+
+    <div class="col-2">
+      <mat-form-field class="example-full-width">
+        <mat-label>Sector</mat-label>
+        <input matInput placeholder="Computer" (keyup)="sectorKW=$event.target.value">
+      </mat-form-field>
+      <section style="max-height: 400px; overflow-y: auto;">
+        <!-- <mat-list>
+          <mat-list-item *ngFor="let sector of allSectors">
+            <mat-checkbox class="m-1">
+              {{sector}}
+            </mat-checkbox>
+          </mat-list-item>
+        </mat-list> -->
+        <mat-selection-list #selectedOptions>
+          <mat-list-option *ngFor="let sector of (allSectors | appFilter: sectorKW)" [value]="sector" (click)="updateSectorSelection($event)"
+            [selected]="checkInSelection(sector)"
+          >
+            {{sector}}
+          </mat-list-option>
+        </mat-selection-list>
+        
+      </section>
+      <div class="btn btn-group">
+        <!-- <button mat-stroked-button class="btn btn-warning" (click)="getStocksBySector()">
+          <mat-icon>refresh</mat-icon>
+        </button> -->
+        <button mat-stroked-button class="btn btn-warning" (click)="resetSectorSelection()">
+          <mat-icon>reset_tv</mat-icon>
+        </button>
+        <button mat-stroked-button class="btn btn-warning" (click)="allSectorSelection()">
+          <mat-icon>done_all</mat-icon>
+        </button>
+      </div>
+      
+    </div>
+    <div class="col-10">
+      <div id="sectors" style="min-height: 400px;"></div>
+      <hr>
+      <div class="btn-block">
+        <button mat-button class="btn btn-sm border" (click)="removeSector(sector)" *ngFor="let sector of selectedSectors">
+          {{sector}}
+          <mat-icon class="mx-auto">close</mat-icon>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
     
-  </mat-grid-tile>
-  <mat-grid-tile
-      colspan='2'
-      rowspan='1'
-      style = "border-right: solid 1px #888888;"
-    >
-    Value Picks
-  </mat-grid-tile>
-  <mat-grid-tile
-      colspan='2'
-      rowspan='1'
-    >
-    Events
-  </mat-grid-tile>
-  
-
-</mat-grid-list>
