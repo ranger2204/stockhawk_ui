@@ -1,124 +1,333 @@
-<!-- Modal -->
+<div class="container-fluid">
+        <div class="row" *ngIf="refreshInProgress">
+            <mat-progress-bar class="mb-3" mode="determinate" value="{{currentProgress}}"></mat-progress-bar>
+        </div>
+        <div class="row">
+            <div class="col-4">
+                <div class="input-group float-left">
 
+                    <select (change)="changePortfolio($event.target.value)" class="w-50">
+                        <option selected>PortFolio</option>
+                        <option *ngFor="let portfolio of portfolios" [value]="portfolio.portfolio_id">
+                            {{portfolio.portfolio_name}} ({{portfolio.portfolio_id}})
+                        </option>
+                    </select>
 
-<div class="container">
-    <div class="row">
-
-        <div class="col-12">
-            <div class="row">
-                <div class="col-12">
-                    <div class="input-group float-left">
-
-                        <select (change)="changePortfolio($event.target.value)" class="w-25">
-                            <option selected>PortFolio</option>
-                            <option *ngFor="let portfolio of portfolios" [value]="portfolio.portfolio_id">
-                                {{portfolio.portfolio_name}} ({{portfolio.portfolio_id}})
-                            </option>
-                        </select>
-
-                        <div class="input-group-append">
-                            <button mat-icon-button (click)="openAddNewPFDialog()">
-                                <mat-icon>add</mat-icon>
-                            </button>
-                            
-                            <button mat-icon-button (click)="removeAPF()">
-                                <mat-icon>close</mat-icon>
-                            </button>
-                        </div>
+                    <div class="btn-group">
+                        <button mat-stroked-button class="btn btn-dark rounded-0" (click)="openAddNewPFDialog()" title="Add new PF">
+                            <mat-icon>add</mat-icon>
+                        </button>
+                        
+                        <button mat-stroked-button class="btn btn-dark" (click)="removeAPF()" title="Remove PF">
+                            <mat-icon>close</mat-icon>
+                        </button>
+                        <!-- <button mat-icon-button color="warn" (click)="updateStockDetails()" [disabled]='refreshInProgress'>
+                            <mat-icon [class.fa-rotate]='refreshInProgress' >download</mat-icon>
+                            <mat-icon class='fa-rotate'>refresh</mat-icon>
+                        </button> -->
+                        
+                     
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="row" *ngIf="portfolioDetails" style="overflow: hidden;">
+        <div class="row" *ngIf="portfolioDetails" style="overflow: hidden;">
 
-                <div class="col-4">
+            <div class="col-4">
+  
+                <table class="table table-sm">
+                    <tr>
+                        <td>Invested</td>
+                        <td>{{roundFloat(portfolioDetails['value_invested'])}}</td>
+                    </tr>
+                    <tr>
+                        <td>Value</td>
+                        <td>{{roundFloat(portfolioDetails['current_valuation'])}}</td>
+                    </tr>
+                    <tr>
+                        <td>P/L</td>
+                        <td>
+                            {{roundFloat(((portfolioDetails['current_valuation'])-(portfolioDetails['value_invested'])))}}
+                            <h5 class="badge badge-success m-auto" [class.badge-danger]="((portfolioDetails['current_valuation'])-(portfolioDetails['value_invested']))*100/(portfolioDetails['value_invested']) < 0">
+                                {{roundFloat(((portfolioDetails['current_valuation'])-(portfolioDetails['value_invested']))*100/(portfolioDetails['value_invested']))}} %
+                            </h5>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>P Only</td>
+                        <td>
+                            {{roundFloat(getProfitOnly())}}
+                            <h5 class="badge badge-success m-auto">
+                                {{roundFloat(getProfitOnly()*100/portfolioDetails['value_invested'])}} %
+                            </h5>
+                        </td>
+                    </tr>
+                    
+                </table>
 
-                    <table class="table table-sm">
-                        <tr>
-                            <td>Invested</td>
-                            <td>{{portfolioDetails['value_invested']}}</td>
-                        </tr>
-                        <tr>
-                            <td>Value</td>
-                            <td>{{portfolioDetails['current_valuation']}}</td>
-                        </tr>
-                        <tr>
-                            <td>P/L</td>
-                            <td>
-                                <h5 class="m-auto">
-                                    {{roundFloat(((portfolioDetails['current_valuation'])-(portfolioDetails['value_invested'])))}}
-                                </h5>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Change</td>
-                            <td>
-                                <h5 class="badge badge-success m-auto" [class.badge-danger]="((portfolioDetails['current_valuation'])-(portfolioDetails['value_invested']))*100/(portfolioDetails['value_invested']) < 0">
-                                    {{roundFloat(((portfolioDetails['current_valuation'])-(portfolioDetails['value_invested']))*100/(portfolioDetails['value_invested']))}} %
-                                </h5>
-                            </td>
-                        </tr>
-                    </table>
+        
+                <form class="w-100">
 
-                    <form class="w-100">
-
-                        <mat-form-field>
-                            <mat-label>Stock Name</mat-label>
-                            <input matInput (keyup)='getStockList($event)' [matAutocomplete]="auto">
-                            <mat-autocomplete #auto="matAutocomplete">
-                                <mat-option *ngFor="let stock of stockAutoCompleteList" [value]="stock.stock_name"
-                                    (click)="newInvestment.inv_stock_name=stock.stock_name; newInvestment.inv_stock_id = stock.stock_id;newInvestment.inv_stock_cost_price_per_share=stock.stock_current_price">
-                                    {{stock.stock_name}}
-                                </mat-option>
-                            </mat-autocomplete>
-                        </mat-form-field>
-                        <mat-form-field>
-                            <mat-label>Quantity</mat-label>
-                            <input matInput (keyup)='newInvestment.inv_stock_qty=$event.target.value'>
-                        </mat-form-field>
-                        <mat-form-field>
-                            <mat-label>Cost/Share</mat-label>
-                            <input matInput (keyup)='newInvestment.inv_stock_cost_per_share=$event.target.value'>
-                        </mat-form-field>
-                        <!-- <mat-form-field>
-                            <mat-label>Projected</mat-label>
-                            <input matInput disabled
-                                [value]='newInvestment.inv_stock_cost_per_share*newInvestment.inv_stock_qty'>
-                        </mat-form-field> -->
-                        <mat-form-field>
-                            <mat-label>Total Cost</mat-label>
-                            <input matInput disabled [value]='newInvestment.inv_stock_cost_per_share*newInvestment.inv_stock_qty'>
-                        </mat-form-field>
-                        <mat-form-field>
-                            <mat-label>Price/Share</mat-label>
-                            <input matInput disabled [value]='newInvestment.inv_stock_cost_price_per_share'>
-                        </mat-form-field>
-                        <mat-form-field>
-                            <mat-label>Current Value</mat-label>
-                            <input matInput disabled
-                                [value]='newInvestment.inv_stock_cost_price_per_share*newInvestment.inv_stock_qty'>
-                        </mat-form-field>
-                    </form>
-                    <button type="submit" mat-stroked-button (click)="addInvestment()">Add</button>
-
+                    <mat-form-field>
+                        <mat-label>Stock Name</mat-label>
+                        <input matInput (keyup)='getStockList($event)' [matAutocomplete]="auto">
+                        <mat-autocomplete #auto="matAutocomplete">
+                            <mat-option *ngFor="let stock of stockAutoCompleteList" [value]="stock.stock_name"
+                                (click)="newInvestment.inv_stock_name=stock.stock_name; newInvestment.inv_stock_id = stock.stock_id;newInvestment.inv_stock_cost_price_per_share=stock.stock_current_price">
+                                {{stock.stock_name}}
+                            </mat-option>
+                        </mat-autocomplete>
+                    </mat-form-field>
+                    <mat-form-field>
+                        <mat-label>Quantity</mat-label>
+                        <input matInput (keyup)='newInvestment.inv_stock_qty=$event.target.value'>
+                    </mat-form-field>
+                    <mat-form-field>
+                        <mat-label>Remarks</mat-label>
+                        <input matInput (keyup)='newInvestment.inv_remarks=$event.target.value'>
+                    </mat-form-field>
+                    <mat-form-field>
+                        <mat-label>Cost/Share</mat-label>
+                        <input matInput (keyup)='newInvestment.inv_stock_cost_per_share=$event.target.value' [value]='newInvestment.inv_stock_cost_price_per_share'>
+                    </mat-form-field>
+                    <!-- <mat-form-field>
+                        <mat-label>Projected</mat-label>
+                        <input matInput disabled
+                            [value]='newInvestment.inv_stock_cost_per_share*newInvestment.inv_stock_qty'>
+                    </mat-form-field> -->
+                    <mat-form-field>
+                        <mat-label>Total Cost</mat-label>
+                        <input matInput disabled [value]='newInvestment.inv_stock_cost_per_share*newInvestment.inv_stock_qty'>
+                    </mat-form-field>
+                    <mat-form-field>
+                        <mat-label>Price/Share</mat-label>
+                        <input matInput disabled [value]='newInvestment.inv_stock_cost_price_per_share'>
+                    </mat-form-field>
+                    <mat-form-field>
+                        <mat-label>Current Value</mat-label>
+                        <input matInput disabled
+                            [value]='newInvestment.inv_stock_cost_price_per_share*newInvestment.inv_stock_qty'>
+                    </mat-form-field>
+                </form>
+                <div class="btn-group">
+                    <button mat-stroked-button class="btn btn-primary" (click)="addInvestment()">Add</button>
+                    <button mat-stroked-button class="btn btn-primary" (click)="updateStockDetails()" [disabled]="refreshInProgress">
+                        <mat-icon [class.fa-rotate]='refreshInProgress'>refresh</mat-icon>
+                    </button>
                 </div>
+                
+                
+                <hr>
+                
 
-                <div class="col-8">
-                    <div id="portfolio-trend"></div>
-                    <table mat-table [dataSource]="investmentDetails" class="mat-elevation-z5 w-100">
+                <details class="card">
+                    <summary class="card-header">
+                        
+                        Deals <span class="badge badge-primary">{{getLen(dealDetails)}}</span>
+                        
+                    </summary>
+                    <div class="card-body flex" style="max-height: 400px; overflow-y: auto;">
+                        <div *ngFor="let detail of dealDetails" class="card m-1 w-50">
+                            <div class='card-header'>
+                                {{getStockFromId(detail.deal_stock_id).stock_name}}
+                                <span class="badge badge-info" style="width: 60px;">
+                                    {{detail.deal_type}}
+                                </span>
+                                <span class="badge badge-success" style="width: 60px;" [class.badge-danger]="detail.deal_trans_type=='Sell'">
+                                    {{detail.deal_trans_type}}
+                                </span>
+                                
+                            </div>
+                            
+                            <div class="card-body">
+                                <h5 class="card-title m-0">
+                                    {{detail.deal_title}}
+                                </h5>
+                                <h6 class="card-subtitle text-muted m-0">
+                                    {{detail.deal_qty}} @ {{detail.deal_price}} on {{detail.deal_date}}
+                                </h6>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </details>
+
+                <details class="card">
+                    <summary class="card-header">
+                        
+                        Insiders <span class="badge badge-primary">{{getLen(insDetails)}}</span>
+                        
+                    </summary>
+                    <div class="card-body flex" style="max-height: 400px; overflow-y: auto;">
+                        <div *ngFor="let detail of insDetails" class="card m-1 w-50">
+                            <div class='card-header'>
+                                {{getStockFromId(detail.ins_stock_id).stock_name}}
+                                <span class="badge badge-info">
+                                    {{detail.ins_action}}
+                                </span>
+                                <span class="badge badge-success">
+                                    {{detail.ins_mode}}
+                                </span>
+                                
+                            </div>
+                            <div class="card-body">
+                                <h5 class="card-title m-0">
+                                    {{detail.ins_name}} - {{detail.ins_category}}
+                                </h5>
+                                <h6 class="card-subtitle text-muted m-0">
+                                    {{detail.ins_qty}} @ {{detail.ins_price}} on {{detail.ins_date}}
+                                    Holding : {{detail.ins_post_per_hold}}
+                                </h6>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </details>
+                
+
+                <details class="card">
+                    <summary class="card-header">
+                        
+                        Broker Research <span class="badge badge-primary">{{getLen(brDetails)}}</span>
+                        
+                    </summary>
+                    <div class="card-body flex" style="max-height: 400px; overflow-y: auto;">
+                        <div *ngFor="let detail of brDetails" class="card m-1 w-50">
+                            <div class='card-header'>
+                                {{getStockFromId(detail.brokres_stock_id).stock_name}}
+                                <span class="badge badge-info">
+                                    {{detail.brokres_rec_flag}}
+                                </span>    
+                                <span class="badge badge-success">
+                                    {{detail.brokres_rec_date}}
+                                </span>                          
+                            </div>
+                            <div class="card-body">
+                                <h5 class="card-title m-0">
+                                    {{detail.brokres_org}}
+                                </h5>
+                                <h6 class="card-subtitle text-muted m-0">
+                                    RP: {{detail.brokres_rec_price}}  TP: {{detail.brokres_target}}
+                                </h6>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </details>
+
+                <details class="card">
+                    <summary class="card-header">
+                        
+                        Dividends <span class="badge badge-primary" >{{getLen(divDetails)}}</span>
+                        
+                    </summary>
+                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                        <div *ngFor="let detail of divDetails" class="card m-1 w-50">
+                            <div class='card-header'>
+                                {{getStockFromId(detail.div_stock_id).stock_name}}
+                                <span class="badge badge-info" style="width: 60px;">
+                                    {{detail.div_type}}
+                                </span>
+                            </div>
+                            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                                <h5 class="card-title m-0">
+                                    {{detail.div_eff_date}} ({{detail.div_anno_date}})
+                                </h5>
+                                <h6 class="card-subtitle text-muted m-0">
+                                    {{detail.div_remarks}}
+                                </h6>
+                            </div>
+                        </div>
+                    </div>
+                </details>    
+                
+                <details class="card">
+                    <summary class="card-header">
+                        
+                        AGM <span class="badge badge-primary" >{{getLen(agmDetails)}}</span>
+                        
+                    </summary>
+                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                        <div *ngFor="let detail of agmDetails" class="card m-1 w-50">
+                            <div class='card-header'>
+                                {{getStockFromId(detail.agm_stock_id).stock_name}} 
+                                <span class="badge badge-info" style="width: 60px;">
+                                    ({{detail.agm_purpose}})
+                                </span>
+                            </div>
+                            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                                <h5 class="card-title m-0">
+                                    {{detail.agm_date}} ({{detail.agm_annoc_date}})
+                                </h5>
+
+                                <h6 class="card-subtitle text-muted m-0">
+                                    {{detail.agm_remarks}} 
+                                </h6>
+                            </div>
+                        </div>
+                    </div>
+                </details>  
+                <details class="card">
+                    <summary class="card-header">
+                        
+                        BM <span class="badge badge-primary" >{{getLen(bmDetails)}}</span>
+                        
+                    </summary>
+                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                        <div *ngFor="let detail of bmDetails" class="card m-1 w-50">
+                            <div class='card-header'>
+                                {{getStockFromId(detail.bm_stock_id).stock_name}} 
+                                <span class="badge badge-info" style="width: 160px;">
+                                    ({{detail.bm_remarks}})
+                                </span>
+                            </div>
+                            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                                <h5 class="card-title m-0">
+                                    {{detail.bm_date}}
+                                </h5>
+
+    
+                            </div>
+                        </div>
+                    </div>
+                </details> 
+            </div>
+     
+            <div class="col-8">
+                <div class="input-group m-1">
+                    <mat-form-field>
+                        <mat-label>History</mat-label>
+                        <mat-select value=30 (selectionChange)="changePriceHistory($event.value)">
+                            <mat-option value="30">30</mat-option>
+                            <mat-option value="60">60</mat-option>
+                            <mat-option value="120">120</mat-option>
+                            <mat-option value="240">180</mat-option>
+                            <!-- <mat-option value="365">365</mat-option> -->
+                        </mat-select>
+                    </mat-form-field>
+                 
+                </div>
+                   
+                <div id="portfolio-trend" style="height: 300px;"></div>
+                <div class="card" style="max-height: 300px; overflow-y: auto;">
+                    <table mat-table [dataSource]="investmentDetails" class="mat-elevation-z5 w-100 h-50" >
                         <ng-container matColumnDef="stock_name">
                             <th mat-header-cell *matHeaderCellDef> Stock </th>
                             <td mat-cell *matCellDef="let each; let i = index;"> 
-                                <h5 class='badge m-auto'>
-                                    {{stockDetails[i].stock_name}} 
-                                </h5>
+                                <a href="{{getStockFromId(each.inv_stock_id).stock_site_url}}">
+                                    <h5 class='badge m-auto'>
+                                        {{getStockFromId(each.inv_stock_id).stock_name}}
+                                    </h5>
+                                </a>
                             </td>
                         </ng-container>
                         <ng-container matColumnDef="quantity">
                             <th mat-header-cell *matHeaderCellDef> Quantity </th>
                             <td mat-cell *matCellDef="let each; let i = index;"> 
                                 <h5 class='badge m-auto'>
-                                    {{stockDetails[i].stock_qty}} 
+                                    {{each.inv_stock_qty}}
                                 </h5>
                             </td>
                         </ng-container>
@@ -126,7 +335,7 @@
                             <th mat-header-cell *matHeaderCellDef> Cost </th>
                             <td mat-cell *matCellDef="let each; let i = index;">
                                 <h5 class='badge m-auto'>
-                                    {{roundFloat(each.inv_stock_cost_price * stockDetails[i].stock_qty)}} 
+                                    {{roundFloat(each.inv_stock_cost_price * each.inv_stock_qty)}} 
                                 </h5>
                             </td>
                         </ng-container>
@@ -134,7 +343,7 @@
                             <th mat-header-cell *matHeaderCellDef> Market Value </th>
                             <td mat-cell *matCellDef="let each; let i = index;"> 
                                 <h5 class='badge m-auto'>
-                                    {{roundFloat(stockDetails[i].stock_latest_price * stockDetails[i].stock_qty)}} 
+                                    {{roundFloat(getStockFromId(each.inv_stock_id).stock_latest_price * each.inv_stock_qty)}} 
                                 </h5>
                             </td>
                         </ng-container>
@@ -142,53 +351,59 @@
                             <th mat-header-cell *matHeaderCellDef> P/L </th>
                             <td mat-cell *matCellDef="let each; let i = index;">
                                 <h5 class="m-auto">
-                                    {{roundFloat(((stockDetails[i].stock_latest_price * stockDetails[i].stock_qty) -
-                                    (each.inv_stock_cost_price * stockDetails[i].stock_qty)))}}
+                                    {{roundFloat(((getStockFromId(each.inv_stock_id).stock_latest_price * each.inv_stock_qty) -
+                                    (each.inv_stock_cost_price * each.inv_stock_qty)))}}
                                 </h5>
-                                
                             </td>
                         </ng-container>
                         <ng-container matColumnDef="change">
                             <th mat-header-cell *matHeaderCellDef> Change </th>
                             <td mat-cell *matCellDef="let each; let i = index;">
-                                <h5 class='badge badge-success m-auto w-100' [class.badge-danger]="((stockDetails[i].stock_latest_price * stockDetails[i].stock_qty) -
-                                (each.inv_stock_cost_price * stockDetails[i].stock_qty)) *100 / (each.inv_stock_cost_price *
-                                stockDetails[i].stock_qty) < 0">
-                                    {{roundFloat(((stockDetails[i].stock_latest_price * stockDetails[i].stock_qty) -
-                                    (each.inv_stock_cost_price * stockDetails[i].stock_qty)) *100 / (each.inv_stock_cost_price *
-                                    stockDetails[i].stock_qty))}} %
+                                <h5 class='badge badge-success m-auto w-100' [class.badge-danger]="((getStockFromId(each.inv_stock_id).stock_latest_price * each.inv_stock_qty) -
+                                (each.inv_stock_cost_price * each.inv_stock_qty)) *100 / (each.inv_stock_cost_price *
+                                each.inv_stock_qty) < 0">
+                                    {{roundFloat(((getStockFromId(each.inv_stock_id).stock_latest_price * each.inv_stock_qty) -
+                                    (each.inv_stock_cost_price * each.inv_stock_qty)) *100 / (each.inv_stock_cost_price *
+                                    each.inv_stock_qty))}} %
                                 </h5>
-                                
                             </td>
                         </ng-container>
-
                         <ng-container matColumnDef="perSharePriceCost">
                             <th mat-header-cell *matHeaderCellDef> BP </th>
                             <td mat-cell *matCellDef="let each; let i = index;">
                                 <h5 class='badge m-auto'>
-                                    {{each.inv_stock_cost_price}}
+                                    {{roundFloat(each.inv_stock_cost_price)}}
                                 </h5>
                             </td>
                         </ng-container>
-
+    
                         <ng-container matColumnDef="perSharePriceCurrent">
                             <th mat-header-cell *matHeaderCellDef> CP </th>
                             <td mat-cell *matCellDef="let each; let i = index;">
-                                <h5 class='badge badge-success m-auto w-100' [class.badge-danger]="each.inv_stock_cost_price > stockDetails[i].stock_latest_price">
-                                    {{stockDetails[i].stock_latest_price}}
+                                <h5 class='badge badge-success m-auto w-100' [class.badge-danger]="each.inv_stock_cost_price > getStockFromId(each.inv_stock_id).stock_latest_price">
+                                    {{getStockFromId(each.inv_stock_id).stock_latest_price}}
                                 </h5>
                             </td>
                         </ng-container>
-
+    
                         <ng-container matColumnDef="5yfd">
                             <th mat-header-cell *matHeaderCellDef>5YFD@10%</th>
                             <td mat-cell *matCellDef="let each; let i = index;">
                                 <h5 class='badge m-auto'>
-                                    {{calculateCI((each.inv_stock_cost_price * stockDetails[i].stock_qty), 5, 10)}}
+                                    {{calculateCI((each.inv_stock_cost_price * each.inv_stock_qty), 5, 10)}}
                                 </h5>
                             </td>
                         </ng-container>
 
+                        <ng-container matColumnDef="remarks">
+                            <th mat-header-cell *matHeaderCellDef>Remarks</th>
+                            <td mat-cell *matCellDef="let each; let i = index;">
+                                <h5 class='badge badge-secondary m-1' *ngFor="let tag of split(each.inv_remarks)">
+                                    {{trim(tag)}}
+                                </h5>
+                            </td>
+                        </ng-container>
+    
                         <ng-container matColumnDef="action">
                             <th mat-header-cell *matHeaderCellDef> </th>
                             <td mat-cell *matCellDef="let each; let i = index;"> 
@@ -196,19 +411,14 @@
                                 <button mat-icon-button (click)="removeInvestment(each.inv_id)"><mat-icon>cancel</mat-icon></button>
                             </td>
                         </ng-container>
-                        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-                        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+                        <tr mat-header-row *matHeaderRowDef="displayedColumnsPortfolio"></tr>
+                        <tr mat-row *matRowDef="let row; columns: displayedColumnsPortfolio;"></tr>
                         
                     </table>
                 </div>
+               
             </div>
         </div>
-
-    </div>
-
-
-
-
 
 
 
@@ -220,7 +430,6 @@
       Alerts
     </div>
   </div> -->
-
-
-
+  <hr>
+  
 </div>

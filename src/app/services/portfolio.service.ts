@@ -48,7 +48,8 @@ export class PortfolioService {
       'sid': newInvestment.inv_stock_id,
       'qty': newInvestment.inv_stock_qty,
       'cost_per_share': newInvestment.inv_stock_cost_per_share,
-      'pid': portfolioId
+      'pid': portfolioId,
+      'remarks': newInvestment.inv_remarks
     })
   }
 
