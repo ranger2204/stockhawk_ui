@@ -51,6 +51,26 @@ export class StockService {
     })
   }
 
+  getNewsforStocks(stocks = []){
+    if(stocks.length == 0){
+      stocks = [{
+        'stock_id': -1
+      }]
+    }
+    let stockIds = []
+    stocks.forEach(stock => {
+      if(stockIds.indexOf(stock.stock_id) == -1)
+        stockIds.push(stock.stock_id)
+    });
+    return this.http.get(`${environment.baseUrl}/api/stock/details`, {
+      params: {
+        'stockIds': stockIds.join(','),
+        'type': 'news',
+        'window': '30'
+      }
+    })
+  }
+
   getAGMforStocks(stocks = []){
     if(stocks.length == 0){
       stocks = [{
@@ -106,6 +126,25 @@ export class StockService {
         'stockIds': stockIds.join(','),
         'type': 'broker-research',
         'window': window.toString()
+      }
+    })
+  }
+
+  getTopMFHoldings(stocks=[]){
+    if(stocks.length == 0){
+      stocks = [{
+        'stock_id': -1
+      }]
+    }
+    let stockIds = []
+    stocks.forEach(stock => {
+      if(stockIds.indexOf(stock.stock_id) == -1)
+        stockIds.push(stock.stock_id)
+    });
+    return this.http.get(`${environment.baseUrl}/api/stock/details`, {
+      params: {
+        'stockIds': stockIds.join(','),
+        'type': 'topmfholdings',
       }
     })
   }

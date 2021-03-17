@@ -27,6 +27,7 @@ export class VirtualMarketComponent implements OnInit {
   bmDetails = [];
   insDetails = [];
   brDetails = [];
+  newsDetails = [];
 
   stockAutoCompleteList = [];
   stockAutoCompleteTO = undefined;
@@ -91,6 +92,7 @@ export class VirtualMarketComponent implements OnInit {
         this.getBM();
         this.getInsider();
         this.getBrokRes();
+        this.getNews();
 
         
       })
@@ -258,6 +260,15 @@ export class VirtualMarketComponent implements OnInit {
       this.stockService.getAGMforStocks(this.stockDetails).subscribe(data => {
         // console.table(data['deals'])
         this.agmDetails = data['agm']
+      })
+  }
+
+  getNews(){
+    this.newsDetails = []
+    if(this.stockDetails.length > 0)
+      this.stockService.getNewsforStocks(this.stockDetails).subscribe(data => {
+        // console.table(data['deals'])
+        this.newsDetails = data['news']
       })
   }
 

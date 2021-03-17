@@ -292,6 +292,29 @@
                             </div>
                         </div>
                     </div>
+                </details>
+                <details class="card">
+                    <summary class="card-header">
+                        
+                        News <span class="badge badge-primary" >{{getLen(newsDetails)}}</span>
+                        
+                    </summary>
+                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                        <div *ngFor="let detail of newsDetails" class="card m-1 w-50">
+                            <div class='card-header'>
+                                {{getStockFromId(detail.news_stock_id).stock_name}} 
+                                <span class="badge badge-info" style="width: 160px;">
+                                    {{detail.news_creation_date}}
+                                    
+                                </span>
+                            </div>
+                            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                                <h5 class="card-title m-0">
+                                    <a href="detail.news_post_url">{{detail.news_heading}}</a>
+                                </h5>
+                            </div>
+                        </div>
+                    </div>
                 </details> 
             </div>
      
@@ -302,8 +325,11 @@
                         <mat-select value=30 (selectionChange)="changePriceHistory($event.value)">
                             <mat-option value="30">30</mat-option>
                             <mat-option value="60">60</mat-option>
-                            <mat-option value="120">120</mat-option>
-                            <mat-option value="240">180</mat-option>
+                            <mat-option value="180">180</mat-option>
+                            <mat-option value="365">1Y</mat-option>
+                            <mat-option value="720">2Y</mat-option>
+                            <mat-option value="1000">3Y</mat-option>
+                            <mat-option value="1800">5Y</mat-option>
                             <!-- <mat-option value="365">365</mat-option> -->
                         </mat-select>
                     </mat-form-field>
@@ -380,7 +406,7 @@
                         <ng-container matColumnDef="perSharePriceCurrent">
                             <th mat-header-cell *matHeaderCellDef> CP </th>
                             <td mat-cell *matCellDef="let each; let i = index;">
-                                <h5 class='badge badge-success m-auto w-100' [class.badge-danger]="each.inv_stock_cost_price > getStockFromId(each.inv_stock_id).stock_latest_price">
+                                <h5 class='badge badge-success m-auto w-100' [class.badge-danger]="each.inv_stock_cost_price > getStockFromId(each.inv_stock_id).stock_latest_price" [title]="getStockFromId(each.inv_stock_id).stock_price_update_datetime">
                                     {{getStockFromId(each.inv_stock_id).stock_latest_price}}
                                 </h5>
                             </td>

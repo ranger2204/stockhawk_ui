@@ -26,9 +26,13 @@ export class AnalyticsComponent implements OnInit {
   divDetails = []
   bmDetails = []
   insDetails = []
+  topMFStocks = []
+  newsDetails = []
   quarterDetails = []
   competitionDetails = [];
   brDetails = [];
+
+  equityMetric = "latest"
 
   refreshInProgress = false
 
@@ -68,9 +72,15 @@ export class AnalyticsComponent implements OnInit {
       'stockName', 'name', 'category', 'transactionDate', 'qty', 'price', 'action', 'mode', 'holding'
     ],
     'br': [
-      'stockName', 'organization', 'flag', 'recDate', 'recPrice', 'targetPrice'
+      'stockName', 'organization', 'flag', 'recDate', 'curPrice', 'recPrice', 'targetPrice', 'margin'
+    ],
+    'news': [
+      'stockName', 'newsDate', 'newsHead'
     ]
   }
+
+  valuePicks = {}
+  commonStocks = new Set()
 
   constructor(
     private stockService: StockService,
@@ -82,23 +92,45 @@ export class AnalyticsComponent implements OnInit {
     this.getSectors()
   }
 
+  getCommonStocks(){
+
+    Object.keys(this.valuePicks).forEach(item => {
+      if(this.commonStocks.size == 0){
+        this.commonStocks = new Set(this.commonStocks[item])
+      }
+      else{
+        this.commonStocks = new Set(
+          [...this.valuePicks[item]].filter(x => this.commonStocks.has(x))
+        )
+      }
+    })
+  }
+
+
   updateAllStocks(){
     this.refreshInProgress = true;
 
     this.stockService.getAllStocksDetails().subscribe( async data => {
       let stocks = data['stocks'];
-      // console.table(stocks)
+      console.table(stocks.length)
       let stockChunk = []
       let chunkSize = 10
       let currentChunkIndex = 0
 
       for(let stock of stocks){
         stockChunk.push(stock)
+        
         if(stockChunk.length == chunkSize){
-          await this.stockService.updateStockDetails(stockChunk).toPromise();
-          stockChunk = []
-          currentChunkIndex += 1
-          this.currentProgress = currentChunkIndex * 100 / (stocks.length/chunkSize)
+          try {
+            await this.stockService.updateStockDetails(stockChunk).toPromise();
+          } catch (error) {
+            //pass
+          } finally{
+            stockChunk = []
+            currentChunkIndex += 1
+            this.currentProgress = currentChunkIndex * 100 / (stocks.length/chunkSize)
+          }
+          
         }
       }
 
@@ -209,7 +241,8 @@ export class AnalyticsComponent implements OnInit {
 
   changePriceHistory(lookBack){
     this.historyLB = lookBack;
-    this.getPriceHistory()
+    if(this.currentStock != undefined)
+      this.getPriceHistory()
   }
 
   getAnalytics(){
@@ -222,21 +255,43 @@ export class AnalyticsComponent implements OnInit {
   getPriceHistory(){
     this.stockService.getPriceHistory(this.currentStock, this.historyLB).subscribe(data => {
       
-      let series = []
+      let prices = []
+      let volumes = []
+      let maxVolume = 0;
+
+      // console.table(data['price_history'])
+
       data['price_history'].forEach(item => {
-        series.push(
+        prices.push(
           [
             Date.parse(item.stock_price_date),
             item.stock_price_close
           ]
         )
+        volumes.push(
+          [
+            Date.parse(item.stock_price_date),
+            item.stock_price_volume
+          ]
+        )
+
+        if(maxVolume < item.stock_price_volume)
+          maxVolume = item.stock_price_volume
       });
 
-      this.priceHistory = [{
-        'name': this.currentStock.stock_name,
-        'data': series
-      }]
-      this.drawPriceHistory();
+      let priceVolume = [{
+        'name': 'Price',
+        'data': prices
+        
+      },{
+        'name': 'Volume',
+        'data': volumes,
+        'type': 'column',
+        'yAxis': 1,
+        'pointWidth': Math.max(1, 240.0/volumes.length)
+      }
+    ]
+      this.drawPriceHistory(priceVolume, maxVolume, this.currentStock.stock_name);
     });
   }
 
@@ -274,12 +329,16 @@ export class AnalyticsComponent implements OnInit {
       let item = competition[i]
       try{
         let qdata = await this.stockService.getQuaterlyForStocks([item]).toPromise()
-        
-        let meanQtrProfit = this.getMean(qdata['quarterly'], 'qrtr_net_profit')
+        // console.log(qdata['quarterly'])
+        let metric = 0
+        if(this.equityMetric == 'mean')
+          metric = this.getMean(qdata['quarterly'], 'qrtr_net_profit')
+        else
+          metric = parseFloat(qdata['quarterly'][0]['qrtr_net_profit'])
         // console.log(`${item.stock_name} : ${lastQtrProfit}`)
         competitionDetails.push({
           'name': item.stock_name,
-          'data': [[item.stock_current_price, meanQtrProfit]]
+          'data': [[item.stock_current_price, metric]]
         })
 
       }
@@ -349,6 +408,11 @@ export class AnalyticsComponent implements OnInit {
 
   }
 
+  changeMetric(){
+    console.log(`Metric : ${this.equityMetric}`)
+    if(this.currentStock.stock_name.length != 0)
+      this.getCompetition()
+  }
 
   getMatchingDetails(list, id, key){
     let details = []
@@ -380,6 +444,15 @@ export class AnalyticsComponent implements OnInit {
     })
   }
 
+  getNews(){
+    this.dealDetails = []
+
+    this.stockService.getNewsforStocks().subscribe(data => {
+      // console.table(data['deals'])
+      this.newsDetails = data['news']
+    })
+  }
+
   getDeals(){
     this.dealDetails = []
 
@@ -391,9 +464,10 @@ export class AnalyticsComponent implements OnInit {
       // console.log(dealCounts)
       let dataSeries = []
       Object.keys(dealCounts['Purchase']).forEach(it => {
+        let stockObj = this.getStockFromId(it)
         dataSeries.push(
           {
-            'name': this.getStockFromId(it).stock_name,
+            'name': `${stockObj.stock_name}`,
             'data': [dealCounts['Purchase'][it]],
             'type': 'column',
             // 'hidden': true
@@ -405,7 +479,17 @@ export class AnalyticsComponent implements OnInit {
         return b.data[0] - a.data[0]
       })
 
-      this.drawDistribution('deals-distribution-buy', 'Deals-Purchase', dataSeries.splice(0, this.TOP_N))
+      let top_items = dataSeries.splice(0, this.TOP_N)
+
+      this.commonStocks['deals'] = []
+      top_items.forEach(item => {
+        this.commonStocks['deals'].push(
+          item.name
+        )
+      })
+
+
+      this.drawDistribution('deals-distribution-buy', 'Deals-Purchase', top_items)
 
     })
   }
@@ -426,6 +510,33 @@ export class AnalyticsComponent implements OnInit {
       // console.table(data['deals'])
       this.bmDetails = data['bm']
     })
+  }
+
+  getTopMFHoldings(){
+    this.topMFStocks = []
+    this.stockService.getTopMFHoldings().subscribe(data => {
+      console.log(data)
+      this.topMFStocks = data['topmfholdings']
+      let dataSeries = []
+      this.topMFStocks.forEach(item => {
+        dataSeries.push({
+          'name': this.getStockFromId(item[0]).stock_name,
+          'data': [item[1]]
+        })
+      })
+      let top_items = dataSeries.splice(0, this.TOP_N)
+
+      this.valuePicks['topmfholdings'] = []
+      top_items.forEach(item => {
+        this.valuePicks['topmfholdings'].push(
+          item.name
+        )
+      })
+
+      this.drawDistribution('top-mf-holdings', 'TOP MF HELD STOCKS - #MFS', top_items)
+
+    })
+
   }
 
   getBrokRes(){
@@ -453,7 +564,16 @@ export class AnalyticsComponent implements OnInit {
         return b.data[0] - a.data[0]
       })
 
-      this.drawDistribution('br-distribution-buy', 'BR-BUY', dataSeries.splice(0, this.TOP_N))
+      let top_items = dataSeries.splice(0, this.TOP_N)
+
+      this.valuePicks['broker-research'] = []
+      top_items.forEach(item => {
+        this.valuePicks['broker-research'].push(
+          item.name
+        )
+      })
+
+      this.drawDistribution('br-distribution-buy', 'BR-BUY', top_items)
 
     })
   }
@@ -467,6 +587,10 @@ export class AnalyticsComponent implements OnInit {
     })
   }
 
+  getFloatFromLocale(numStr){
+    return parseFloat(numStr.replace(',', ''))
+  }
+
   roundFloat(floatValue: Number) {
     return Number((floatValue).toFixed(2)).toLocaleString();
   }
@@ -477,18 +601,23 @@ export class AnalyticsComponent implements OnInit {
       if(stock.stock_id == stockId)
         return stock
     }
+    return {
+      'stock_name': ""
+    }
   }
 
   getAllStocks(){
     this.allStocks = []
     this.stockService.getAllStocksDetails().subscribe(data => {
       this.allStocks = data['stocks']
+      this.getBrokRes();
+      this.getIns();
       this.getAGM();
       this.getBM();
       this.getDeals();
       this.getDividends();
-      this.getIns();
-      this.getBrokRes();
+      this.getTopMFHoldings();
+      this.getNews();
 
     })
   }
@@ -684,8 +813,7 @@ export class AnalyticsComponent implements OnInit {
           text: 'Count'
         }
       },
-
-      
+    
 
       plotOptions: {
         series: {
@@ -702,6 +830,7 @@ export class AnalyticsComponent implements OnInit {
       },
 
       series: [{
+        'name': distName.split('-')[1],
         'data': data
       }]
     }
@@ -709,10 +838,10 @@ export class AnalyticsComponent implements OnInit {
     Highcharts.chart(divId, chartOptions as Highcharts.Options)
   }
 
-  drawPriceHistory() {
+  drawPriceHistory(priceVolume, maxVolume, stockName) {
     let chartOptions = {
       title: {
-        text: 'Price Trend'
+        text: 'Price Trend - '+stockName
       },
 
       xAxis: {
@@ -722,11 +851,18 @@ export class AnalyticsComponent implements OnInit {
         }
       },
 
-      yAxis: {
+      yAxis: [{
         title: {
           text: 'Value'
         }
       },
+      { // Primary yAxis
+        title: {
+            text: 'Volume',
+        },
+        opposite: true,
+        max: 4*maxVolume
+      }],
 
       plotOptions: {
         series: {
@@ -742,7 +878,7 @@ export class AnalyticsComponent implements OnInit {
         crosshairs: true
       },
 
-      series: this.priceHistory
+      series: priceVolume
     }
   
     Highcharts.chart('price-history', chartOptions as Highcharts.Options)
