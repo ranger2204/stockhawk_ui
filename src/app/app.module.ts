@@ -24,6 +24,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import {MatCheckboxModule} from '@angular/material/checkbox';
 import {MatListModule} from '@angular/material/list';
 import {MatSortModule} from '@angular/material/sort';
+import {MatButtonToggleModule} from '@angular/material/button-toggle';
 
 import { AnalyticsComponent } from './components/analytics/analytics.component';
 import { VirtualMarketComponent } from './components/virtual-market/virtual-market.component';
@@ -69,7 +70,8 @@ import { FilterPipe } from './pipes/filter.pipe';
     MatDialogModule,
     MatCardModule,
     MatBadgeModule,
-    MatProgressBarModule
+    MatProgressBarModule,
+    MatButtonToggleModule
   ],
   providers: [
     PortfolioService,
