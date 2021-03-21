@@ -31,7 +31,11 @@ export class VirtualMarketComponent implements OnInit {
 
   stockAutoCompleteList = [];
   stockAutoCompleteTO = undefined;
-  displayedColumnsPortfolio = ['stock_name', 'quantity', 'perSharePriceCost', 'perSharePriceCurrent', 'cost', 'market_value', 'pL', 'change', '5yfd', 'remarks', 'action']
+  displayedColumnsPortfolio = [
+    'stock_name', 'quantity', 'perShareCostPrice', 
+    'perShareCurrentPrice', 'cost', 
+    'market_value', 'pL', 'change', '5yfd', 'perShareProjectedPrice', 'pPL', 'remarks', 'action'
+  ]
   displayedColumnsDeals = ['dealStock', 'dealType', 'dealTitle', 'dealTransType', 'dealQty', 'dealPrice']
   stockPriceHistory = {}
 
@@ -97,6 +101,17 @@ export class VirtualMarketComponent implements OnInit {
         
       })
     }
+  }
+
+  getMaxTargetFromBR(stock_id){
+    // console.log(this.brDetails)
+    let maxTarget = -1;
+    this.brDetails.forEach(item => {
+      if(item.brokres_stock_id == stock_id){
+        maxTarget = Math.max(Number.parseFloat(item.brokres_target), maxTarget)
+      }
+    })
+    return maxTarget
   }
 
 

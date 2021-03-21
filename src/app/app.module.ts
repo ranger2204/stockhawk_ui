@@ -25,6 +25,8 @@ import {MatCheckboxModule} from '@angular/material/checkbox';
 import {MatListModule} from '@angular/material/list';
 import {MatSortModule} from '@angular/material/sort';
 import {MatButtonToggleModule} from '@angular/material/button-toggle';
+import {MatPaginatorModule} from '@angular/material/paginator';
+import {MatSliderModule} from '@angular/material/slider';
 
 import { AnalyticsComponent } from './components/analytics/analytics.component';
 import { VirtualMarketComponent } from './components/virtual-market/virtual-market.component';
@@ -71,7 +73,9 @@ import { FilterPipe } from './pipes/filter.pipe';
     MatCardModule,
     MatBadgeModule,
     MatProgressBarModule,
-    MatButtonToggleModule
+    MatButtonToggleModule,
+    MatPaginatorModule,
+    MatSliderModule
   ],
   providers: [
     PortfolioService,

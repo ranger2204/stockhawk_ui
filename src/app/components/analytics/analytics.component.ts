@@ -3,6 +3,7 @@ import {FormControl} from '@angular/forms';
 import { StockService } from '../../services/stock.service';
 import * as Highcharts from 'highcharts';
 import { ObjectUnsubscribedError } from 'rxjs';
+import { FilterPipe } from '../../pipes/filter.pipe'
 
 export class Stock{
   stock_name: string = "";
@@ -20,6 +21,7 @@ export class AnalyticsComponent implements OnInit {
 
   stockAutoCompleteList = []
   stockAutoCompleteTO = undefined;
+  filterPipe = undefined;
 
   agmDetails = []
   dealDetails = []
@@ -33,6 +35,7 @@ export class AnalyticsComponent implements OnInit {
   brDetails = [];
 
   equityMetric = "latest"
+  stockMaxPrice = 100
 
   refreshInProgress = false
 
@@ -43,7 +46,7 @@ export class AnalyticsComponent implements OnInit {
   
   allSectors = [];
   selectedSectors = [];
-  TOP_N = 30;
+  TOP_N = 100;
 
   
   @ViewChild('selectedOptions') selectedOptions;
@@ -79,6 +82,16 @@ export class AnalyticsComponent implements OnInit {
     ]
   }
 
+  pagedFiltered = {
+    'brDetails': [],
+    'insDetails': [],
+    'dealDetails': [],
+    'agmDetails': [],
+    'newsDetails': []
+  }
+
+  
+
   valuePicks = {}
   commonStocks = new Set()
 
@@ -88,9 +101,69 @@ export class AnalyticsComponent implements OnInit {
 
   ngOnInit(): void {
     this.currentStock = new Stock()
+    this.filterPipe = new FilterPipe()
     this.getAllStocks()
     this.getSectors()
   }
+
+  filterDataWithPipe(array, keyword, id_){
+    if(keyword.length == 0)
+      return array
+    return this.filterPipe.transform(array, keyword, this.allStocks, id_)
+  }
+
+  updatePagedFiltered(){
+    let dummyEvent = {
+      'pageSize': 30,
+      'pageIndex': 0
+    }
+
+    // this.onChangePage(event, this.brDetails, 'brDetails')
+    this.onChangePage(
+      dummyEvent, 
+      this.filterDataWithPipe(this.dealDetails, this.eventKW, 'deal_stock_id'),
+      'dealDetails'
+    )
+    this.onChangePage(
+      dummyEvent, 
+      this.filterDataWithPipe(this.insDetails, this.eventKW, 'ins_stock_id'),
+      'insDetails'
+    )
+    this.onChangePage(
+      dummyEvent, 
+      this.filterDataWithPipe(this.brDetails, this.eventKW, 'brokres_stock_id'),
+      'brDetails'
+    )
+    this.onChangePage(
+      dummyEvent, 
+      this.filterDataWithPipe(this.divDetails, this.eventKW, 'div_stock_id'),
+      'divDetails'
+    )
+
+    this.onChangePage(
+      dummyEvent, 
+      this.filterDataWithPipe(this.newsDetails, this.eventKW, 'news_stock_id'),
+      'newsDetails'
+    )
+
+    this.onChangePage(
+      dummyEvent, 
+      this.filterDataWithPipe(this.bmDetails, this.eventKW, 'bm_stock_id'),
+      'bmDetails'
+    )
+
+    this.onChangePage(
+      dummyEvent, 
+      this.filterDataWithPipe(this.agmDetails, this.eventKW, 'agm_stock_id'),
+      'agmDetails'
+    )
+    // console.table(this.pagedFiltered['dealDetails'])
+    // this.onChangePage(event, this.brDetails, 'brDetails')
+    // this.onChangePage(event, this.brDetails, 'brDetails')
+    // this.onChangePage(event, this.brDetails, 'brDetails')
+    // this.onChangePage(event, this.brDetails, 'brDetails')
+  }
+
 
   getCommonStocks(){
 
@@ -218,16 +291,18 @@ export class AnalyticsComponent implements OnInit {
 
   getStockList(event) {
     
-    let stockName = event.target.value
+    let stockName: String = event.target.value
     if (this.stockAutoCompleteTO != undefined) {
       clearTimeout(this.stockAutoCompleteTO)
     }
+    if (stockName.length == 0)
+      return
 
     this.stockAutoCompleteTO = setTimeout(() =>
       this.stockService.getStockByName(stockName).subscribe(data => {
         this.stockAutoCompleteList = data['stocks']
       }),
-      5
+      500
     )
   }
 
@@ -398,7 +473,7 @@ export class AnalyticsComponent implements OnInit {
       {
         'name': 'Dividend',
         'data': series['dividend'],
-        // 'yAxis': 2,
+        'yAxis': 2,
         // 'type': 'column',
       },
       
@@ -431,25 +506,39 @@ export class AnalyticsComponent implements OnInit {
     return stockIds
   }
 
+  onChangePage(event, array, key_='brDetails'){
+    // console.log(event)
+    // if (array.length <= event.pageSize){
+    //   this.pagedFiltered[key_] = array
+    //   return
+    // }
+    this.pagedFiltered[key_] = array.slice(
+      event.pageIndex*event.pageSize,
+      Math.min(array.length, (event.pageIndex + 1)*event.pageSize)
+    )
+  }
+
   getLen(objList){
     return objList.length
   }
 
   getAGM(){
-    this.dealDetails = []
+    this.agmDetails = []
 
     this.stockService.getAGMforStocks().subscribe(data => {
       // console.table(data['deals'])
       this.agmDetails = data['agm']
+      this.pagedFiltered['agmDetails'] = this.agmDetails.slice(0, 30)
     })
   }
 
   getNews(){
-    this.dealDetails = []
+    this.newsDetails = []
 
     this.stockService.getNewsforStocks().subscribe(data => {
       // console.table(data['deals'])
       this.newsDetails = data['news']
+      this.pagedFiltered['newsDetails'] = this.newsDetails.slice(0, 30)
     })
   }
 
@@ -465,14 +554,15 @@ export class AnalyticsComponent implements OnInit {
       let dataSeries = []
       Object.keys(dealCounts['Purchase']).forEach(it => {
         let stockObj = this.getStockFromId(it)
-        dataSeries.push(
-          {
-            'name': `${stockObj.stock_name}`,
-            'data': [dealCounts['Purchase'][it]],
-            'type': 'column',
-            // 'hidden': true
-          }
-        )
+        if(stockObj.stock_current_price <= this.stockMaxPrice)
+          dataSeries.push(
+            {
+              'name': `${stockObj.stock_name}`,
+              'data': [dealCounts['Purchase'][it]],
+              'type': 'column',
+              // 'hidden': true
+            }
+          )
       })
       
       dataSeries.sort((a, b) => {
@@ -490,16 +580,19 @@ export class AnalyticsComponent implements OnInit {
 
 
       this.drawDistribution('deals-distribution-buy', 'Deals-Purchase', top_items)
+      this.pagedFiltered['dealDetails'] = this.dealDetails.slice(0, 30)
 
     })
   }
 
   getIns(){
-    this.dealDetails = []
+    this.insDetails = []
 
     this.stockService.getInsforStocks().subscribe(data => {
       // console.table(data['deals'])
       this.insDetails = data['insider']
+      this.pagedFiltered['insDetails'] = this.insDetails.slice(0, 30)
+
     })
   }
 
@@ -509,7 +602,15 @@ export class AnalyticsComponent implements OnInit {
     this.stockService.getBMforStocks().subscribe(data => {
       // console.table(data['deals'])
       this.bmDetails = data['bm']
+      this.pagedFiltered['bmDetails'] = this.bmDetails.slice(0, 30)
+
     })
+  }
+
+  updateValuePicks(){
+    this.getDeals()
+    this.getBrokRes()
+    this.getTopMFHoldings()
   }
 
   getTopMFHoldings(){
@@ -519,10 +620,12 @@ export class AnalyticsComponent implements OnInit {
       this.topMFStocks = data['topmfholdings']
       let dataSeries = []
       this.topMFStocks.forEach(item => {
-        dataSeries.push({
-          'name': this.getStockFromId(item[0]).stock_name,
-          'data': [item[1]]
-        })
+        let stockObj = this.getStockFromId(item[0])
+        if(stockObj.stock_current_price <= this.stockMaxPrice)
+          dataSeries.push({
+            'name': stockObj.stock_name,
+            'data': [item[1]]
+          })
       })
       let top_items = dataSeries.splice(0, this.TOP_N)
 
@@ -550,14 +653,16 @@ export class AnalyticsComponent implements OnInit {
       // console.log(brCounts)
       let dataSeries = []
       Object.keys(brCounts['BUY']).forEach(it => {
-        dataSeries.push(
-          {
-            'name': this.getStockFromId(it).stock_name,
-            'data': [brCounts['BUY'][it]],
-            'type': 'column',
-            // 'hidden': true
-          }
-        )
+        let stockObj = this.getStockFromId(it)
+        if(stockObj.stock_current_price <= this.stockMaxPrice)
+          dataSeries.push(
+            {
+              'name': stockObj.stock_name,
+              'data': [brCounts['BUY'][it]],
+              'type': 'column',
+              // 'hidden': true
+            }
+          )
       })
       
       dataSeries.sort((a, b) => {
@@ -574,7 +679,7 @@ export class AnalyticsComponent implements OnInit {
       })
 
       this.drawDistribution('br-distribution-buy', 'BR-BUY', top_items)
-
+      this.pagedFiltered['brDetails'] = this.brDetails.slice(0, 30)
     })
   }
 
@@ -584,6 +689,8 @@ export class AnalyticsComponent implements OnInit {
     this.stockService.getDividendForStocks().subscribe(data => {
       // console.table(data['dividends'])
       this.divDetails = data['dividends']
+      this.pagedFiltered['divDetails'] = this.divDetails.slice(0, 30)
+
     })
   }
 
@@ -667,13 +774,13 @@ export class AnalyticsComponent implements OnInit {
                     }
                 }
             },
-            states: {
-                hover: {
-                    marker: {
-                        enabled: false
-                    }
-                }
-            },
+            // states: {
+            //     hover: {
+            //         marker: {
+            //             enabled: false
+            //         }
+            //     }
+            // },
             tooltip: {
                 headerFormat: '<b>{series.name}</b><br>',
                 pointFormat: 'Profit {point.y} Cr, Price Rs.{point.x}'
@@ -681,10 +788,10 @@ export class AnalyticsComponent implements OnInit {
         }
     },
 
-      tooltip: {
-        shared: true,
-        crosshairs: true
-      },
+      // tooltip: {
+      //   shared: true,
+      //   crosshairs: true
+      // },
 
       series: competitionData
     }
@@ -861,7 +968,7 @@ export class AnalyticsComponent implements OnInit {
             text: 'Volume',
         },
         opposite: true,
-        max: 4*maxVolume
+        max: 5*maxVolume
       }],
 
       plotOptions: {
