@@ -1,470 +1,928 @@
 <div class="container-fluid">
-        <div class="row" *ngIf="refreshInProgress">
-            <mat-progress-bar class="mb-3" mode="determinate" value="{{currentProgress}}"></mat-progress-bar>
-        </div>
-        <div class="row">
-            <div class="col-4">
-                <div class="input-group float-left">
+  <div class="row" *ngIf="refreshInProgress">
+    <mat-progress-bar class="mb-3" mode="determinate" value="{{currentProgress}}"></mat-progress-bar>
+  </div>
 
-                    <select (change)="changePortfolio($event.target.value)" class="w-50">
-                        <option selected>PortFolio</option>
-                        <option *ngFor="let portfolio of portfolios" [value]="portfolio.portfolio_id">
-                            {{portfolio.portfolio_name}} ({{portfolio.portfolio_id}})
-                        </option>
-                    </select>
+  <div class="row">
+    <div class="col-4">
+      <div class="input-group float-left">
 
-                    <div class="btn-group">
-                        <button mat-stroked-button class="btn btn-dark rounded-0" (click)="openAddNewPFDialog()" title="Add new PF">
-                            <mat-icon>add</mat-icon>
-                        </button>
-                        
-                        <button mat-stroked-button class="btn btn-dark" (click)="removeAPF()" title="Remove PF">
-                            <mat-icon>close</mat-icon>
-                        </button>
-                        <!-- <button mat-icon-button color="warn" (click)="updateStockDetails()" [disabled]='refreshInProgress'>
+        <select (change)="changePortfolio($event.target.value)" class="w-50">
+          <option selected>PortFolio</option>
+          <option *ngFor="let portfolio of portfolios" [value]="portfolio.portfolio_id" class="text-lg-center">
+            {{portfolio.portfolio_name}} ({{portfolio.portfolio_id}})
+          </option>
+        </select>
+
+        <div class="btn-group">
+          <button mat-stroked-button class="btn btn-dark rounded-0" (click)="openAddNewPFDialog()" title="Add new PF">
+            <mat-icon>add</mat-icon>
+          </button>
+
+          <button mat-stroked-button class="btn btn-dark" (click)="removeAPF()" title="Remove PF">
+            <mat-icon>close</mat-icon>
+          </button>
+          <!-- <button mat-icon-button color="warn" (click)="updateStockDetails()" [disabled]='refreshInProgress'>
                             <mat-icon [class.fa-rotate]='refreshInProgress' >download</mat-icon>
                             <mat-icon class='fa-rotate'>refresh</mat-icon>
                         </button> -->
-                        
-                     
-                    </div>
-                </div>
-            </div>
+
+
         </div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
 
-        <div class="row" *ngIf="portfolioDetails" style="overflow: hidden;">
+  </div>
+  <!-- <hr> -->
+  <div class="row" *ngIf="portfolioDetails" style="overflow: hidden;">
 
-            <div class="col-4">
-  
-                <table class="table table-sm">
-                    <tr>
-                        <td>Invested</td>
-                        <td>{{roundFloat(portfolioDetails['value_invested'])}}</td>
-                    </tr>
-                    <tr>
-                        <td>Value</td>
-                        <td>{{roundFloat(portfolioDetails['current_valuation'])}}</td>
-                    </tr>
-                    <tr>
-                        <td>P/L</td>
-                        <td>
-                            {{roundFloat(((portfolioDetails['current_valuation'])-(portfolioDetails['value_invested'])))}}
-                            <h5 class="badge badge-success m-auto" [class.badge-danger]="((portfolioDetails['current_valuation'])-(portfolioDetails['value_invested']))*100/(portfolioDetails['value_invested']) < 0">
-                                {{roundFloat(((portfolioDetails['current_valuation'])-(portfolioDetails['value_invested']))*100/(portfolioDetails['value_invested']))}} %
-                            </h5>
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>P Only</td>
-                        <td>
-                            {{roundFloat(getProfitOnly())}}
-                            <h5 class="badge badge-success m-auto">
-                                {{roundFloat(getProfitOnly()*100/portfolioDetails['value_invested'])}} %
-                            </h5>
-                        </td>
-                    </tr>
-                    
-                </table>
 
-        
-                <form class="w-100">
+    <div class="col-4">
 
-                    <mat-form-field>
-                        <mat-label>Stock Name</mat-label>
-                        <input matInput (keyup)='getStockList($event)' [matAutocomplete]="auto">
-                        <mat-autocomplete #auto="matAutocomplete">
-                            <mat-option *ngFor="let stock of stockAutoCompleteList" [value]="stock.stock_name"
-                                (click)="newInvestment.inv_stock_name=stock.stock_name; newInvestment.inv_stock_id = stock.stock_id;newInvestment.inv_stock_cost_price_per_share=stock.stock_current_price">
-                                {{stock.stock_name}}
-                            </mat-option>
-                        </mat-autocomplete>
-                    </mat-form-field>
-                    <mat-form-field>
-                        <mat-label>Quantity</mat-label>
-                        <input matInput (keyup)='newInvestment.inv_stock_qty=$event.target.value'>
-                    </mat-form-field>
-                    <mat-form-field>
-                        <mat-label>Remarks</mat-label>
-                        <input matInput (keyup)='newInvestment.inv_remarks=$event.target.value'>
-                    </mat-form-field>
-                    <mat-form-field>
-                        <mat-label>Cost/Share</mat-label>
-                        <input matInput (keyup)='newInvestment.inv_stock_cost_per_share=$event.target.value' [value]='newInvestment.inv_stock_cost_price_per_share'>
-                    </mat-form-field>
-                    <!-- <mat-form-field>
+      <div class="mx-auto w-100" id="sector-allocation"></div>
+      <div class="mx-auto w-100" id="inv-trend"></div>
+      <table class="table table-sm">
+        <tr>
+          <td>#Stocks</td>
+          <td>{{getLen(getUniqueStocks())}}</td>
+        </tr>
+        <tr>
+          <td>Invested</td>
+          <td>{{roundFloat(portfolioDetails['value_invested'])}}</td>
+        </tr>
+        <tr>
+          <td>Value</td>
+          <td>{{roundFloat(portfolioDetails['current_valuation'])}}</td>
+        </tr>
+        <tr>
+          <td>P/L</td>
+          <td>
+            {{roundFloat(((portfolioDetails['current_valuation'])-(portfolioDetails['value_invested'])))}}
+            <h5 class="badge badge-success m-auto"
+              [class.badge-danger]="((portfolioDetails['current_valuation'])-(portfolioDetails['value_invested']))*100/(portfolioDetails['value_invested']) < 0">
+              {{roundFloat(((portfolioDetails['current_valuation'])-(portfolioDetails['value_invested']))*100/(portfolioDetails['value_invested']))}}
+              %
+            </h5>
+          </td>
+        </tr>
+
+        <tr>
+          <td>P Only</td>
+          <td>
+            {{roundFloat(getProfitOnly())}}
+            <h5 class="badge badge-success m-auto">
+              {{roundFloat(getProfitOnly()*100/portfolioDetails['value_invested'])}} %
+            </h5>
+          </td>
+        </tr>
+
+      </table>
+
+
+      <form class="w-100">
+
+        <mat-form-field>
+          <mat-label>Stock Name</mat-label>
+          <input matInput (keyup)='getStockList($event)' [matAutocomplete]="auto">
+          <mat-autocomplete #auto="matAutocomplete">
+            <mat-option *ngFor="let stock of stockAutoCompleteList" [value]="stock.stock_name"
+              (click)="changeNewInvestment(stock)">
+              {{stock.stock_name}}
+            </mat-option>
+          </mat-autocomplete>
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Quantity</mat-label>
+          <input matInput (keyup)='newInvestment.inv_stock_qty=$event.target.value'>
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Remarks</mat-label>
+          <input matInput (keyup)='newInvestment.inv_remarks=$event.target.value'>
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Cost/Share</mat-label>
+          <input matInput (keyup)='newInvestment.inv_stock_cost_per_share=$event.target.value'
+            [value]='newInvestment.inv_stock_cost_price_per_share==undefined?0:newInvestment.inv_stock_cost_price_per_share'>
+        </mat-form-field>
+        <!-- <mat-form-field>
                         <mat-label>Projected</mat-label>
                         <input matInput disabled
                             [value]='newInvestment.inv_stock_cost_per_share*newInvestment.inv_stock_qty'>
                     </mat-form-field> -->
-                    <mat-form-field>
-                        <mat-label>Total Cost</mat-label>
-                        <input matInput disabled [value]='newInvestment.inv_stock_cost_per_share*newInvestment.inv_stock_qty'>
-                    </mat-form-field>
-                    <mat-form-field>
-                        <mat-label>Price/Share</mat-label>
-                        <input matInput disabled [value]='newInvestment.inv_stock_cost_price_per_share'>
-                    </mat-form-field>
-                    <mat-form-field>
-                        <mat-label>Current Value</mat-label>
-                        <input matInput disabled
-                            [value]='newInvestment.inv_stock_cost_price_per_share*newInvestment.inv_stock_qty'>
-                    </mat-form-field>
-                </form>
-                <div class="btn-group">
-                    <button mat-stroked-button class="btn btn-primary" (click)="addInvestment()">Add</button>
-                    <button mat-stroked-button class="btn btn-primary" (click)="updateStockDetails()" [disabled]="refreshInProgress">
-                        <mat-icon [class.fa-rotate]='refreshInProgress'>refresh</mat-icon>
-                    </button>
-                </div>
-                
-                
-                <hr>
-                
+        <mat-form-field>
+          <mat-label>Total Cost</mat-label>
+          <input matInput disabled [value]='newInvestment.inv_stock_cost_per_share*newInvestment.inv_stock_qty'>
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Price/Share</mat-label>
+          <input matInput disabled
+            [value]='newInvestment.inv_stock_cost_price_per_share==undefined?0:newInvestment.inv_stock_cost_price_per_share'>
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Current Value</mat-label>
+          <input matInput disabled [value]='newInvestment.inv_stock_cost_price_per_share*newInvestment.inv_stock_qty'>
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Date</mat-label>
+          <input matInput [matDatepicker]="picker" (dateInput)="setInvestmentDate($event)" (dateChange)="setInvestmentDate($event)">
+          <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-datepicker #picker ></mat-datepicker>
 
-                <details class="card">
-                    <summary class="card-header">
-                        
-                        Deals <span class="badge badge-primary">{{getLen(dealDetails)}}</span>
-                        
-                    </summary>
-                    <div class="card-body flex" style="max-height: 400px; overflow-y: auto;">
-                        <div *ngFor="let detail of dealDetails" class="card m-1 w-50">
-                            <div class='card-header'>
-                                {{getStockFromId(detail.deal_stock_id).stock_name}}
-                                <span class="badge badge-info" style="width: 60px;">
-                                    {{detail.deal_type}}
-                                </span>
-                                <span class="badge badge-success" style="width: 60px;" [class.badge-danger]="detail.deal_trans_type=='Sell'">
-                                    {{detail.deal_trans_type}}
-                                </span>
-                                
-                            </div>
-                            
-                            <div class="card-body">
-                                <h5 class="card-title m-0">
-                                    {{detail.deal_title}}
-                                </h5>
-                                <h6 class="card-subtitle text-muted m-0">
-                                    {{detail.deal_qty}} @ {{detail.deal_price}} on {{detail.deal_date}}
-                                </h6>
-                            </div>
-                        </div>
-                    </div>
-                    
-                </details>
-
-                <details class="card">
-                    <summary class="card-header">
-                        
-                        Insiders <span class="badge badge-primary">{{getLen(insDetails)}}</span>
-                        
-                    </summary>
-                    <div class="card-body flex" style="max-height: 400px; overflow-y: auto;">
-                        <div *ngFor="let detail of insDetails" class="card m-1 w-50">
-                            <div class='card-header'>
-                                {{getStockFromId(detail.ins_stock_id).stock_name}}
-                                <span class="badge badge-info" [class.badge-danger]="detail.ins_action == 'Disposal'">
-                                    {{detail.ins_action}}
-                                </span>
-                                <span class="badge badge-success">
-                                    {{detail.ins_mode}}
-                                </span>
-                                
-                            </div>
-                            <div class="card-body">
-                                <h5 class="card-title m-0">
-                                    {{detail.ins_name}} - {{detail.ins_category}}
-                                </h5>
-                                <h6 class="card-subtitle text-muted m-0">
-                                    {{detail.ins_qty}} @ {{detail.ins_price}} on {{detail.ins_date}}
-                                    Holding : {{detail.ins_post_per_hold}}
-                                </h6>
-                            </div>
-                        </div>
-                    </div>
-                    
-                </details>
-                
-
-                <details class="card">
-                    <summary class="card-header">
-                        
-                        Broker Research <span class="badge badge-primary">{{getLen(brDetails)}}</span>
-                        
-                    </summary>
-                    <div class="card-body flex" style="max-height: 400px; overflow-y: auto;">
-                        <div *ngFor="let detail of brDetails" class="card m-1 w-50">
-                            <div class='card-header'>
-                                {{getStockFromId(detail.brokres_stock_id).stock_name}}
-                                <span class="badge badge-info">
-                                    {{detail.brokres_rec_flag}}
-                                </span>    
-                                <span class="badge badge-success">
-                                    {{detail.brokres_rec_date}}
-                                </span>                          
-                            </div>
-                            <div class="card-body">
-                                <h5 class="card-title m-0">
-                                    {{detail.brokres_org}}
-                                </h5>
-                                <h6 class="card-subtitle text-muted m-0">
-                                    RP: {{detail.brokres_rec_price}}  TP: {{detail.brokres_target}}
-                                </h6>
-                            </div>
-                        </div>
-                    </div>
-                    
-                </details>
-
-                <details class="card">
-                    <summary class="card-header">
-                        
-                        Dividends <span class="badge badge-primary" >{{getLen(divDetails)}}</span>
-                        
-                    </summary>
-                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
-                        <div *ngFor="let detail of divDetails" class="card m-1 w-50">
-                            <div class='card-header'>
-                                {{getStockFromId(detail.div_stock_id).stock_name}}
-                                <span class="badge badge-info" style="width: 60px;">
-                                    {{detail.div_type}}
-                                </span>
-                            </div>
-                            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
-                                <h5 class="card-title m-0">
-                                    {{detail.div_eff_date}} ({{detail.div_anno_date}})
-                                </h5>
-                                <h6 class="card-subtitle text-muted m-0">
-                                    {{detail.div_remarks}}
-                                </h6>
-                            </div>
-                        </div>
-                    </div>
-                </details>    
-                
-                <details class="card">
-                    <summary class="card-header">
-                        
-                        AGM <span class="badge badge-primary" >{{getLen(agmDetails)}}</span>
-                        
-                    </summary>
-                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
-                        <div *ngFor="let detail of agmDetails" class="card m-1 w-50">
-                            <div class='card-header'>
-                                {{getStockFromId(detail.agm_stock_id).stock_name}} 
-                                <span class="badge badge-info" style="width: 60px;">
-                                    ({{detail.agm_purpose}})
-                                </span>
-                            </div>
-                            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
-                                <h5 class="card-title m-0">
-                                    {{detail.agm_date}} ({{detail.agm_annoc_date}})
-                                </h5>
-
-                                <h6 class="card-subtitle text-muted m-0">
-                                    {{detail.agm_remarks}} 
-                                </h6>
-                            </div>
-                        </div>
-                    </div>
-                </details>  
-                <details class="card">
-                    <summary class="card-header">
-                        
-                        BM <span class="badge badge-primary" >{{getLen(bmDetails)}}</span>
-                        
-                    </summary>
-                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
-                        <div *ngFor="let detail of bmDetails" class="card m-1 w-50">
-                            <div class='card-header'>
-                                {{getStockFromId(detail.bm_stock_id).stock_name}} 
-                                <span class="badge badge-info" style="width: 160px;">
-                                    ({{detail.bm_remarks}})
-                                </span>
-                            </div>
-                            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
-                                <h5 class="card-title m-0">
-                                    {{detail.bm_date}}
-                                </h5>
-
-    
-                            </div>
-                        </div>
-                    </div>
-                </details>
-                <details class="card">
-                    <summary class="card-header">
-                        
-                        News <span class="badge badge-primary" >{{getLen(newsDetails)}}</span>
-                        
-                    </summary>
-                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
-                        <div *ngFor="let detail of newsDetails" class="card m-1 w-50">
-                            <div class='card-header'>
-                                {{getStockFromId(detail.news_stock_id).stock_name}} 
-                                <span class="badge badge-info" style="width: 160px;">
-                                    {{detail.news_creation_date}}
-                                    
-                                </span>
-                            </div>
-                            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
-                                <h5 class="card-title m-0">
-                                    <a href="detail.news_post_url">{{detail.news_heading}}</a>
-                                </h5>
-                            </div>
-                        </div>
-                    </div>
-                </details> 
-            </div>
-     
-            <div class="col-8">
-                <div class="input-group m-1">
-                    <mat-form-field>
-                        <mat-label>History</mat-label>
-                        <mat-select value=30 (selectionChange)="changePriceHistory($event.value)">
-                            <mat-option value="30">30</mat-option>
-                            <mat-option value="60">60</mat-option>
-                            <mat-option value="180">180</mat-option>
-                            <mat-option value="365">1Y</mat-option>
-                            <mat-option value="720">2Y</mat-option>
-                            <mat-option value="1000">3Y</mat-option>
-                            <mat-option value="1800">5Y</mat-option>
-                            <!-- <mat-option value="365">365</mat-option> -->
-                        </mat-select>
-                    </mat-form-field>
-                 
-                </div>
-                   
-                <div id="portfolio-trend" style="height: 300px;"></div>
-                <div class="card" style="max-height: 300px; overflow-y: auto;">
-                    <table mat-table [dataSource]="investmentDetails" class="mat-elevation-z5 w-100 h-50" >
-                        <ng-container matColumnDef="stock_name">
-                            <th mat-header-cell *matHeaderCellDef> Stock </th>
-                            <td mat-cell *matCellDef="let each; let i = index;"> 
-                                <a href="{{getStockFromId(each.inv_stock_id).stock_site_url}}">
-                                    <h5 class='badge m-auto'>
-                                        {{getStockFromId(each.inv_stock_id).stock_name}}
-                                    </h5>
-                                </a>
-                            </td>
-                        </ng-container>
-                        <ng-container matColumnDef="quantity">
-                            <th mat-header-cell *matHeaderCellDef> Quantity </th>
-                            <td mat-cell *matCellDef="let each; let i = index;"> 
-                                <h5 class='badge m-auto'>
-                                    {{each.inv_stock_qty}}
-                                </h5>
-                            </td>
-                        </ng-container>
-                        <ng-container matColumnDef="cost">
-                            <th mat-header-cell *matHeaderCellDef> Cost </th>
-                            <td mat-cell *matCellDef="let each; let i = index;">
-                                <h5 class='badge m-auto'>
-                                    {{roundFloat(each.inv_stock_cost_price * each.inv_stock_qty)}} 
-                                </h5>
-                            </td>
-                        </ng-container>
-                        <ng-container matColumnDef="market_value">
-                            <th mat-header-cell *matHeaderCellDef> Market Value </th>
-                            <td mat-cell *matCellDef="let each; let i = index;"> 
-                                <h5 class='badge m-auto'>
-                                    {{roundFloat(getStockFromId(each.inv_stock_id).stock_latest_price * each.inv_stock_qty)}} 
-                                </h5>
-                            </td>
-                        </ng-container>
-                        <ng-container matColumnDef="pL">
-                            <th mat-header-cell *matHeaderCellDef> P/L </th>
-                            <td mat-cell *matCellDef="let each; let i = index;">
-                                <h5 class="m-auto">
-                                    {{roundFloat(((getStockFromId(each.inv_stock_id).stock_latest_price * each.inv_stock_qty) -
-                                    (each.inv_stock_cost_price * each.inv_stock_qty)))}}
-                                </h5>
-                            </td>
-                        </ng-container>
-                        <ng-container matColumnDef="change">
-                            <th mat-header-cell *matHeaderCellDef> Change </th>
-                            <td mat-cell *matCellDef="let each; let i = index;">
-                                <h5 class='badge badge-success m-auto w-100' [class.badge-danger]="((getStockFromId(each.inv_stock_id).stock_latest_price * each.inv_stock_qty) -
-                                (each.inv_stock_cost_price * each.inv_stock_qty)) *100 / (each.inv_stock_cost_price *
-                                each.inv_stock_qty) < 0">
-                                    {{roundFloat(((getStockFromId(each.inv_stock_id).stock_latest_price * each.inv_stock_qty) -
-                                    (each.inv_stock_cost_price * each.inv_stock_qty)) *100 / (each.inv_stock_cost_price *
-                                    each.inv_stock_qty))}} %
-                                </h5>
-                            </td>
-                        </ng-container>
-                        <ng-container matColumnDef="perShareCostPrice">
-                            <th mat-header-cell *matHeaderCellDef> BP </th>
-                            <td mat-cell *matCellDef="let each; let i = index;">
-                                <h5 class='badge m-auto'>
-                                    {{roundFloat(each.inv_stock_cost_price)}}
-                                </h5>
-                            </td>
-                        </ng-container>
-    
-                        <ng-container matColumnDef="perShareCurrentPrice">
-                            <th mat-header-cell *matHeaderCellDef> CP </th>
-                            <td mat-cell *matCellDef="let each; let i = index;">
-                                <h5 class='badge badge-success m-auto w-100' [class.badge-danger]="each.inv_stock_cost_price > getStockFromId(each.inv_stock_id).stock_latest_price" [title]="getStockFromId(each.inv_stock_id).stock_price_update_datetime">
-                                    {{getStockFromId(each.inv_stock_id).stock_latest_price}}
-                                </h5>
-                            </td>
-                        </ng-container>
-
-                        <ng-container matColumnDef="perShareProjectedPrice">
-                            <th mat-header-cell *matHeaderCellDef> PP </th>
-                            <td mat-cell *matCellDef="let each; let i = index;">
-                                <h5 class="badge m-auto" *ngIf="getMaxTargetFromBR(each.inv_stock_id)!=-1">
-                                    {{getMaxTargetFromBR(each.inv_stock_id)}}
-                                </h5>
-                            </td>
-                        </ng-container>
-
-    
-                        <ng-container matColumnDef="5yfd">
-                            <th mat-header-cell *matHeaderCellDef>5YFD@10%</th>
-                            <td mat-cell *matCellDef="let each; let i = index;">
-                                <h5 class='badge m-auto'>
-                                    {{calculateCI((each.inv_stock_cost_price * each.inv_stock_qty), 5, 10)}}
-                                </h5>
-                            </td>
-                        </ng-container>
-
-                        <ng-container matColumnDef="pPL">
-                            <th mat-header-cell *matHeaderCellDef> P P/L </th>
-                            <td mat-cell *matCellDef="let each; let i = index;">
-                                <h5 class="m-auto" *ngIf="getMaxTargetFromBR(each.inv_stock_id)!=-1">
-                                    {{roundFloat(((getMaxTargetFromBR(each.inv_stock_id) * each.inv_stock_qty) -
-                                    (each.inv_stock_cost_price * each.inv_stock_qty)))}}
-                                </h5>
-                            </td>
-                        </ng-container>
-
-                        <ng-container matColumnDef="remarks">
-                            <th mat-header-cell *matHeaderCellDef>Remarks</th>
-                            <td mat-cell *matCellDef="let each; let i = index;">
-                                <h5 class='badge badge-secondary m-1' *ngFor="let tag of split(each.inv_remarks)">
-                                    {{trim(tag)}}
-                                </h5>
-                            </td>
-                        </ng-container>
-    
-                        <ng-container matColumnDef="action">
-                            <th mat-header-cell *matHeaderCellDef> </th>
-                            <td mat-cell *matCellDef="let each; let i = index;"> 
-                                <!-- <button mat-stroked-button (click)="sellInvestment(each.inv_id)"><mat-icon>sell</mat-icon></button> -->
-                                <button mat-icon-button (click)="removeInvestment(each.inv_id)"><mat-icon>cancel</mat-icon></button>
-                            </td>
-                        </ng-container>
-                        <tr mat-header-row *matHeaderRowDef="displayedColumnsPortfolio"></tr>
-                        <tr mat-row *matRowDef="let row; columns: displayedColumnsPortfolio;"></tr>
-                        
-                    </table>
-                </div>
-               
-            </div>
+          <!-- <input matInput disabled [value]='newInvestment.inv_date'> -->
+        </mat-form-field>
+        <div class="input-group">
+          <input class="form-control" type="file" (change)="onFileSelect($event)">
+          <div class="input-group-append">
+            <button mat-stroked-button class="btn btn-primary" (click)="uploadTrans()">
+              Upload
+            </button>
+          </div>
+          
         </div>
+        
+
+      </form>
+      
+      <div class="btn-group mt-1">
+        <button mat-stroked-button class="btn btn-primary" (click)="addInvestment()">Add</button>
+        <button mat-stroked-button class="btn btn-primary" (click)="updateStockDetails()"
+          [disabled]="refreshInProgress">
+          <mat-icon [class.fa-rotate]='refreshInProgress'>refresh</mat-icon>
+        </button>
+      </div>
+
+
+      <hr>
+
+
+
+      <details class="card">
+        <summary class="card-header">
+
+          Deals <span class="badge badge-primary">{{getLen(dealDetails | appFilter: eventKW : allStocks :
+            'deal_stock_id')}}</span>
+          <button mat-icon-button color="accent" (click)="updateAllStocks(['block-deals','bulk-deals'])"
+            title="Update DB">
+            <mat-icon [class.fa-rotate]='refreshInProgress'>autorenew</mat-icon>
+          </button>
+          <span class="badge badge-info" title="{{getLatestCount(pagedFiltered['dealDetails'], 'deal_date').lValue}}">
+            {{getLatestCount(pagedFiltered['dealDetails'], 'deal_date').newCount}}
+          </span>
+        </summary>
+
+        <div class="card-body flex" style="max-height: 400px; overflow-y: auto;">
+
+          <table mat-table [dataSource]="pagedFiltered['dealDetails']" class="mat-elevation-z8">
+
+            <ng-container matColumnDef="stockName">
+              <th mat-header-cell *matHeaderCellDef> Stock </th>
+              <td mat-cell *matCellDef="let element"> {{getStockFromId(element.deal_stock_id).stock_name}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="curPrice">
+              <th mat-header-cell *matHeaderCellDef> Cur Price </th>
+              <td mat-cell *matCellDef="let element"
+                [class.bg-success]="getStockFromId(element.deal_stock_id).stock_latest_price<element.deal_price">
+                {{getStockFromId(element.deal_stock_id).stock_latest_price}}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="dealType">
+              <th mat-header-cell *matHeaderCellDef> Type </th>
+              <td mat-cell *matCellDef="let element"> {{element.deal_type}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="dealTransType">
+              <th mat-header-cell *matHeaderCellDef> Trans </th>
+              <td mat-cell *matCellDef="let element" class="bg-success"
+                [class.bg-danger]="element.deal_trans_type=='Sell'"> {{element.deal_trans_type}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="dealTitle">
+              <th mat-header-cell *matHeaderCellDef> Title </th>
+              <td mat-cell *matCellDef="let element"> {{element.deal_title}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="dealQty">
+              <th mat-header-cell *matHeaderCellDef> Qty </th>
+              <td mat-cell *matCellDef="let element"> {{element.deal_qty}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="dealPrice">
+              <th mat-header-cell *matHeaderCellDef> Price </th>
+              <td mat-cell *matCellDef="let element"> {{element.deal_price}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="dealDate">
+              <th mat-header-cell *matHeaderCellDef> Date </th>
+              <td mat-cell *matCellDef="let element"> {{element.deal_date}} </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns['deals']"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns['deals'];"></tr>
+
+          </table>
+          <mat-paginator [length]="getLen(filterDataWithPipe(dealDetails, eventKW, 'deal_stock_id'))" [pageSize]="30"
+            (page)="onChangePage($event, filterDataWithPipe(dealDetails, eventKW, 'deal_stock_id'), 'dealDetails')">
+          </mat-paginator>
+
+        </div>
+
+      </details>
+
+      <details class="card">
+        <summary class="card-header">
+          Insider <span class="badge badge-primary">{{getLen(insDetails | appFilter: eventKW : allStocks :
+            'ins_stock_id')}}</span>
+          <button mat-icon-button color="accent" (click)="updateAllStocks(['insider-transaction'])" title="Update DB">
+            <mat-icon [class.fa-rotate]='refreshInProgress'>autorenew</mat-icon>
+          </button>
+          <span class="badge badge-info" title="{{getLatestCount(pagedFiltered['insDetails'], 'ins_date').lValue}}">
+            {{getLatestCount(pagedFiltered['insDetails'], 'ins_date').newCount}}
+          </span>
+        </summary>
+        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+          <table mat-table [dataSource]="pagedFiltered['insDetails']" class="mat-elevation-z8">
+
+            <ng-container matColumnDef="stockName">
+              <th mat-header-cell *matHeaderCellDef> Stock </th>
+              <td mat-cell *matCellDef="let element">
+                {{getStockFromId(element.ins_stock_id).stock_name}}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef> Insider </th>
+              <td mat-cell *matCellDef="let element"> {{element.ins_name}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="category">
+              <th mat-header-cell *matHeaderCellDef> Category </th>
+              <td mat-cell *matCellDef="let element"> {{element.ins_category}} </td>
+            </ng-container>
+
+
+            <ng-container matColumnDef="transactionDate">
+              <th mat-header-cell *matHeaderCellDef> Transaction Date </th>
+              <td mat-cell *matCellDef="let element"> {{element.ins_date}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="qty">
+              <th mat-header-cell *matHeaderCellDef> Qty </th>
+              <td mat-cell *matCellDef="let element"> {{element.ins_qty}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="curPrice">
+              <th mat-header-cell *matHeaderCellDef> Cur Price </th>
+              <td mat-cell *matCellDef="let element"
+                [class.bg-success]="getStockFromId(element.ins_stock_id).stock_latest_price < element.ins_price">
+                {{getStockFromId(element.ins_stock_id).stock_latest_price}}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="price">
+              <th mat-header-cell *matHeaderCellDef> Price </th>
+              <td mat-cell *matCellDef="let element"> {{element.ins_price}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="action">
+              <th mat-header-cell *matHeaderCellDef> Action </th>
+              <td mat-cell *matCellDef="let element" class="bg-success"
+                [class.bg-danger]="element.ins_action=='Disposal'"> {{element.ins_action}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="mode">
+              <th mat-header-cell *matHeaderCellDef> Mode </th>
+              <td mat-cell *matCellDef="let element"> {{element.ins_mode}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="holding">
+              <th mat-header-cell *matHeaderCellDef> Post Holding </th>
+              <td mat-cell *matCellDef="let element"> {{element.ins_post_per_hold}} </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns['insider']"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns['insider'];"></tr>
+
+          </table>
+          <!-- <mat-paginator [length]="getLen(insDetails)" [pageSize]="30" (page)="onChangePage($event, insDetails, 'insDetails')"></mat-paginator> -->
+          <mat-paginator [length]="getLen(filterDataWithPipe(insDetails, eventKW, 'ins_stock_id'))" [pageSize]="30"
+            (page)="onChangePage($event, filterDataWithPipe(insDetails, eventKW, 'ins_stock_id'), 'insDetails')">
+          </mat-paginator>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary class="card-header">
+          Broker Research <span class="badge badge-primary">{{getLen(brDetails | appFilter: eventKW : allStocks :
+            'brokres_stock_id')}}</span>
+          <button mat-icon-button color="accent" (click)="updateAllStocks(['broker-research','broker-research-2'])"
+            title="Update DB">
+            <mat-icon [class.fa-rotate]='refreshInProgress'>autorenew</mat-icon>
+          </button>
+
+          <span class="badge badge-info"
+            title="{{getLatestCount(pagedFiltered['brDetails'], 'brokres_rec_date').lValue}}">
+            {{getLatestCount(pagedFiltered['brDetails'], 'brokres_rec_date').newCount}}
+          </span>
+        </summary>
+        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+          <table mat-table [dataSource]="pagedFiltered['brDetails']" class="mat-elevation-z8">
+
+            <ng-container matColumnDef="stockName">
+              <th mat-header-cell *matHeaderCellDef> Stock </th>
+              <td mat-cell *matCellDef="let element">
+                {{getStockFromId(element.brokres_stock_id).stock_name}}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="organization">
+              <th mat-header-cell *matHeaderCellDef> Org </th>
+              <td mat-cell *matCellDef="let element">
+                {{element.brokres_org}}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="flag">
+              <th mat-header-cell *matHeaderCellDef> Flag </th>
+              <td mat-cell *matCellDef="let element"> <a
+                  href="{{element.brokres_attachment}}">{{element.brokres_rec_flag}}</a> </td>
+            </ng-container>
+
+
+            <ng-container matColumnDef="recDate">
+              <th mat-header-cell *matHeaderCellDef> Rec Date </th>
+              <td mat-cell *matCellDef="let element"> {{element.brokres_rec_date}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="curPrice">
+              <th mat-header-cell *matHeaderCellDef> Cur Price </th>
+              <td mat-cell *matCellDef="let element">
+                {{getStockFromId(element.brokres_stock_id).stock_latest_price}}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="recPrice">
+              <th mat-header-cell *matHeaderCellDef> Rec Price </th>
+              <td mat-cell *matCellDef="let element"
+                [class.bg-success]="getStockFromId(element.brokres_stock_id).stock_latest_price < element.brokres_rec_price">
+                {{element.brokres_rec_price}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="targetPrice">
+              <th mat-header-cell *matHeaderCellDef> Target </th>
+              <td mat-cell *matCellDef="let element"
+                [class.bg-success]="getStockFromId(element.brokres_stock_id).stock_latest_price < getFloatFromLocale(element.brokres_target)">
+                {{element.brokres_target}}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="margin">
+              <th mat-header-cell *matHeaderCellDef> Margin </th>
+              <td mat-cell *matCellDef="let element"
+                [class.bg-warning]="(getFloatFromLocale(element.brokres_target) - getStockFromId(element.brokres_stock_id).stock_latest_price)*100/getStockFromId(element.brokres_stock_id).stock_latest_price > 50">
+                {{roundFloat((getFloatFromLocale(element.brokres_target) -
+                getStockFromId(element.brokres_stock_id).stock_latest_price)*100/getStockFromId(element.brokres_stock_id).stock_latest_price)}}%
+              </td>
+            </ng-container>
+
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns['br']"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns['br'];"></tr>
+
+          </table>
+          <!-- <mat-paginator [length]="getLen(brDetails)" [pageSize]="30" (page)="onChangePage($event, brDetails, 'brDetails')"></mat-paginator> -->
+          <mat-paginator [length]="getLen(filterDataWithPipe(brDetails, eventKW, 'brokres_stock_id'))" [pageSize]="30"
+            (page)="onChangePage($event, filterDataWithPipe(brDetails, eventKW, 'brokres_stock_id'), 'brDetails')">
+          </mat-paginator>
+
+        </div>
+      </details>
+
+      <details class="card">
+        <summary class="card-header">
+          Dividends <span class="badge badge-primary">{{getLen(divDetails | appFilter: eventKW : allStocks :
+            'div_stock_id')}}</span>
+        </summary>
+        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+          <table mat-table [dataSource]="pagedFiltered['divDetails']" class="mat-elevation-z8">
+
+            <ng-container matColumnDef="stockName">
+              <th mat-header-cell *matHeaderCellDef> Stock </th>
+              <td mat-cell *matCellDef="let element"> {{getStockFromId(element.div_stock_id).stock_name}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="curPrice">
+              <th mat-header-cell *matHeaderCellDef> Cur Price </th>
+              <td mat-cell *matCellDef="let element">
+                {{getStockFromId(element.div_stock_id).stock_latest_price}}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="divType">
+              <th mat-header-cell *matHeaderCellDef> Type </th>
+              <td mat-cell *matCellDef="let element"> {{element.div_type}} </td>
+            </ng-container>
+
+
+            <ng-container matColumnDef="divEffectiveDate">
+              <th mat-header-cell *matHeaderCellDef> Effective Date </th>
+              <td mat-cell *matCellDef="let element"> {{element.div_eff_date}} </td>
+            </ng-container>
+
+
+            <ng-container matColumnDef="divAnnoDate">
+              <th mat-header-cell *matHeaderCellDef> Annoucement Date </th>
+              <td mat-cell *matCellDef="let element"> {{element.div_anno_date}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="divRemarks">
+              <th mat-header-cell *matHeaderCellDef> Remarks </th>
+              <td mat-cell *matCellDef="let element"> {{element.div_remarks}} </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns['dividends']"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns['dividends'];"></tr>
+
+          </table>
+          <!-- <mat-paginator [length]="getLen(divDetails)" [pageSize]="30" (page)="onChangePage($event, divDetails, 'divDetails')"></mat-paginator> -->
+          <mat-paginator [length]="getLen(filterDataWithPipe(divDetails, eventKW, 'div_stock_id'))" [pageSize]="30"
+            (page)="onChangePage($event, filterDataWithPipe(divDetails, eventKW, 'div_stock_id'), 'divDetails')">
+          </mat-paginator>
+
+        </div>
+      </details>
+
+      <details class="card">
+        <summary class="card-header">
+          AGM <span class="badge badge-primary">{{getLen(agmDetails | appFilter: eventKW : allStocks :
+            'agm_stock_id')}}</span>
+        </summary>
+        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+          <table mat-table [dataSource]="pagedFiltered['agmDetails']" class="mat-elevation-z8">
+
+            <ng-container matColumnDef="stockName">
+              <th mat-header-cell *matHeaderCellDef> Stock </th>
+              <td mat-cell *matCellDef="let element"> {{getStockFromId(element.agm_stock_id).stock_name}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="curPrice">
+              <th mat-header-cell *matHeaderCellDef> Cur Price </th>
+              <td mat-cell *matCellDef="let element">
+                {{getStockFromId(element.agm_stock_id).stock_latest_price}}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="agmPurpose">
+              <th mat-header-cell *matHeaderCellDef> Purpose </th>
+              <td mat-cell *matCellDef="let element"> {{element.agm_purpose}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="agmDate">
+              <th mat-header-cell *matHeaderCellDef> AGM Date </th>
+              <td mat-cell *matCellDef="let element"> {{element.agm_date}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="agmAnnoDate">
+              <th mat-header-cell *matHeaderCellDef> Annoucement Date </th>
+              <td mat-cell *matCellDef="let element"> {{element.agm_annoc_date}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="agmRemarks">
+              <th mat-header-cell *matHeaderCellDef> Remarks </th>
+              <td mat-cell *matCellDef="let element"> {{element.agm_remarks}} </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns['agm']"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns['agm'];"></tr>
+
+          </table>
+          <!-- <mat-paginator [length]="getLen(agmDetails)" [pageSize]="30" (page)="onChangePage($event, agmDetails, 'agmDetails')"></mat-paginator> -->
+          <mat-paginator [length]="getLen(filterDataWithPipe(agmDetails, eventKW, 'agm_stock_id'))" [pageSize]="30"
+            (page)="onChangePage($event, filterDataWithPipe(agmDetails, eventKW, 'agm_stock_id'), 'agmDetails')">
+          </mat-paginator>
+
+        </div>
+      </details>
+
+      <details class="card">
+        <summary class="card-header">
+          News <span class="badge badge-primary">{{getLen(newsDetails | appFilter: eventKW : allStocks :
+            'news_stock_id')}}</span>
+          <button mat-icon-button color="accent" (click)="updateAllStocks(['news'])" title="Update DB">
+            <mat-icon [class.fa-rotate]='refreshInProgress'>autorenew</mat-icon>
+          </button>
+          <span class="badge badge-info"
+            title="{{getLatestCount(pagedFiltered['newsDetails'], 'news_creation_date').lValue}}">
+            {{getLatestCount(pagedFiltered['newsDetails'], 'news_creation_date').newCount}}
+          </span>
+        </summary>
+        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+          <table mat-table [dataSource]="pagedFiltered['newsDetails']" class="mat-elevation-z8">
+
+            <ng-container matColumnDef="stockName">
+              <th mat-header-cell *matHeaderCellDef> Stock </th>
+              <td mat-cell *matCellDef="let element"> {{getStockFromId(element.news_stock_id).stock_name}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="curPrice">
+              <th mat-header-cell *matHeaderCellDef> Cur Price </th>
+              <td mat-cell *matCellDef="let element">
+                {{getStockFromId(element.news_stock_id).stock_latest_price}}
+              </td>
+            </ng-container>
+
+
+            <ng-container matColumnDef="newsDate">
+              <th mat-header-cell *matHeaderCellDef> Date </th>
+              <td mat-cell *matCellDef="let element"> {{element.news_creation_date}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="newsHead">
+              <th mat-header-cell *matHeaderCellDef> Head </th>
+              <td mat-cell *matCellDef="let element">
+                <a href="{{element.news_post_url}}">
+                  {{element.news_heading}}
+                </a>
+              </td>
+            </ng-container>
+
+
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns['news']"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns['news'];"></tr>
+
+          </table>
+          <!-- <mat-paginator [length]="getLen(newsDetails)" [pageSize]="30" (page)="onChangePage($event, newsDetails, 'newsDetails')"></mat-paginator> -->
+          <mat-paginator [length]="getLen(filterDataWithPipe(newsDetails, eventKW, 'news_stock_id'))" [pageSize]="30"
+            (page)="onChangePage($event, filterDataWithPipe(newsDetails, eventKW, 'news_stock_id'), 'newsDetails')">
+          </mat-paginator>
+
+        </div>
+      </details>
+
+      <details class="card">
+        <summary class="card-header">
+          BM <span class="badge badge-primary">{{getLen(bmDetails | appFilter: eventKW : allStocks :
+            'bm_stock_id')}}</span>
+        </summary>
+        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+
+          <table mat-table [dataSource]="pagedFiltered['bmDetails']" class="mat-elevation-z8">
+
+            <ng-container matColumnDef="stockName">
+              <th mat-header-cell *matHeaderCellDef> Stock </th>
+              <td mat-cell *matCellDef="let element"> {{getStockFromId(element.bm_stock_id).stock_name}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="curPrice">
+              <th mat-header-cell *matHeaderCellDef> Cur Price </th>
+              <td mat-cell *matCellDef="let element">
+                {{getStockFromId(element.bm_stock_id).stock_latest_price}}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="bmRemarks">
+              <th mat-header-cell *matHeaderCellDef> Remarks </th>
+              <td mat-cell *matCellDef="let element"> {{element.bm_remarks}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="bmDate">
+              <th mat-header-cell *matHeaderCellDef> Date </th>
+              <td mat-cell *matCellDef="let element"> {{element.bm_date}} </td>
+            </ng-container>
+
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns['bm']"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns['bm'];"></tr>
+
+          </table>
+          <!-- <mat-paginator [length]="getLen(bmDetails)" [pageSize]="30" (page)="onChangePage($event, bmDetails, 'bmDetails')"></mat-paginator> -->
+          <mat-paginator [length]="getLen(filterDataWithPipe(bmDetails, eventKW, 'bm_stock_id'))" [pageSize]="30"
+            (page)="onChangePage($event, filterDataWithPipe(bmDetails, eventKW, 'bm_stock_id'), 'bmDetails')">
+          </mat-paginator>
+
+        </div>
+      </details>
+    </div>
+
+
+
+    <div class="col-8">
+      <div class="row">
+
+        <mat-form-field class="m-2">
+          <mat-label>History</mat-label>
+          <mat-select [value]="numberToString(historyLB)" (selectionChange)="changePriceHistory($event.value)">
+            <mat-option value="2">2</mat-option>
+            <mat-option value="5">5</mat-option>
+            <mat-option value="30">30</mat-option>
+            <mat-option value="60">60</mat-option>
+            <mat-option value="180">180</mat-option>
+            <mat-option value="365">1Y</mat-option>
+            <mat-option value="720">2Y</mat-option>
+            <mat-option value="1000">3Y</mat-option>
+            <mat-option value="1800">5Y</mat-option>
+            <!-- <mat-option value="365">365</mat-option> -->
+          </mat-select>
+        </mat-form-field>
+
+
+        <mat-form-field class="m-2">
+          <mat-label>Price Type</mat-label>
+          <mat-select [value]="priceType" (selectionChange)="changePriceType($event.value)">
+            <mat-option value="stock_price_open">Open</mat-option>
+            <mat-option value="stock_price_high">High</mat-option>
+            <mat-option value="stock_price_low">Low</mat-option>
+            <mat-option value="stock_price_close">Close</mat-option>
+
+            <!-- <mat-option value="365">365</mat-option> -->
+          </mat-select>
+        </mat-form-field>
+        
+
+        <div class="m-2">
+          <mat-slide-toggle (change)="toggleLiveTracking($event)" [checked]="liveTrack">Live Track</mat-slide-toggle>
+        </div>
+        
+
+      </div>
+
+
+      <div id="portfolio-trend" style="height: 300px;"></div>
+      <div id="portfolio-trend-live" *ngIf="liveTrack" style="height: 300px;"></div>
+      <div id="stock-trend" style="height: 300px;"></div>
+      <div class="card" style="max-height: 300px; overflow-y: auto;">
+        <table mat-table [dataSource]="investmentDetails" multiTemplateDataRows class="mat-elevation-z5 w-100 h-50">
+          <ng-container matColumnDef="stock_name">
+            <th mat-header-cell *matHeaderCellDef> Stock </th>
+            <td mat-cell *matCellDef="let each; let i = index;" (click)="changeStock(each.inv_stock_id)">
+              <a href="{{getStockFromId(each.inv_stock_id).stock_site_url}}">
+                <h5 class='badge m-auto'>
+                  {{getStockFromId(each.inv_stock_id).stock_name}}
+                </h5>
+              </a>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="stock_sector">
+            <th mat-header-cell *matHeaderCellDef> Sector </th>
+            <td mat-cell *matCellDef="let each; let i = index;">
+
+                <h5 class='badge m-auto'>
+                  {{getStockFromId(each.inv_stock_id).stock_category}}
+                </h5>
+   
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="quantity">
+            <th mat-header-cell *matHeaderCellDef> Quantity </th>
+            <td mat-cell *matCellDef="let each; let i = index;">
+              <h5 class='badge m-auto'>
+                {{each.inv_stock_qty}}
+              </h5>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="cost">
+            <th mat-header-cell *matHeaderCellDef> Cost </th>
+            <td mat-cell *matCellDef="let each; let i = index;">
+              <h5 class='badge m-auto'>
+                {{roundFloat(each.inv_stock_cost_price * each.inv_stock_qty)}}
+              </h5>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="market_value">
+            <th mat-header-cell *matHeaderCellDef> Market Value </th>
+            <td mat-cell *matCellDef="let each; let i = index;">
+              <h5 class='badge m-auto'>
+                {{roundFloat(getStockFromId(each.inv_stock_id).stock_latest_price * each.inv_stock_qty)}}
+              </h5>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="pL">
+            <th mat-header-cell *matHeaderCellDef> P/L </th>
+            <td mat-cell *matCellDef="let each; let i = index;">
+              <h5 class="m-auto">
+                {{roundFloat(((getStockFromId(each.inv_stock_id).stock_latest_price * each.inv_stock_qty) -
+                (each.inv_stock_cost_price * each.inv_stock_qty)))}}
+              </h5>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="change">
+            <th mat-header-cell *matHeaderCellDef> Change </th>
+            <td mat-cell *matCellDef="let each; let i = index;">
+              <h5 class='badge badge-success m-auto w-100' [class.badge-danger]="((getStockFromId(each.inv_stock_id).stock_latest_price * each.inv_stock_qty) -
+                              (each.inv_stock_cost_price * each.inv_stock_qty)) *100 / (each.inv_stock_cost_price *
+                              each.inv_stock_qty) < 0">
+                {{roundFloat(((getStockFromId(each.inv_stock_id).stock_latest_price * each.inv_stock_qty) -
+                (each.inv_stock_cost_price * each.inv_stock_qty)) *100 / (each.inv_stock_cost_price *
+                each.inv_stock_qty))}} %
+              </h5>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="perShareCostPrice">
+            <th mat-header-cell *matHeaderCellDef> BP </th>
+            <td mat-cell *matCellDef="let each; let i = index;">
+              <h5 class='badge m-auto'>
+                {{roundFloat(each.inv_stock_cost_price)}}
+              </h5>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="perShareCurrentPrice">
+            <th mat-header-cell *matHeaderCellDef> CP </th>
+            <td mat-cell *matCellDef="let each; let i = index;">
+              <h5 class='badge badge-success m-auto w-100'
+                [class.badge-danger]="each.inv_stock_cost_price > getStockFromId(each.inv_stock_id).stock_latest_price"
+                [title]="getStockFromId(each.inv_stock_id).stock_price_update_datetime">
+                {{getStockFromId(each.inv_stock_id).stock_latest_price}}
+              </h5>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="perShareProjectedPerc">
+            <th mat-header-cell *matHeaderCellDef> PP% </th>
+            <td mat-cell *matCellDef="let each; let i = index;">
+              <h5 class="badge badge-success m-auto w-100" *ngIf="getMaxTargetFromBR(each.inv_stock_id)!=-1" [class.badge-danger]="(getMaxTargetFromBR(each.inv_stock_id) - getStockFromId(each.inv_stock_id).stock_latest_price) < 0">
+                {{roundFloat((getMaxTargetFromBR(each.inv_stock_id) - getStockFromId(each.inv_stock_id).stock_latest_price)*100 / getStockFromId(each.inv_stock_id).stock_latest_price)}} %
+              </h5>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="perShareProjectedPrice">
+            <th mat-header-cell *matHeaderCellDef> PP </th>
+            <td mat-cell *matCellDef="let each; let i = index;">
+              <h5 class="badge m-auto" *ngIf="getMaxTargetFromBR(each.inv_stock_id)!=-1">
+                {{getMaxTargetFromBR(each.inv_stock_id)}}
+              </h5>
+            </td>
+          </ng-container>
+
+
+          <ng-container matColumnDef="5yfd">
+            <th mat-header-cell *matHeaderCellDef>5YFD@10%</th>
+            <td mat-cell *matCellDef="let each; let i = index;">
+              <h5 class='badge m-auto '>
+                {{calculateCI((each.inv_stock_cost_price * each.inv_stock_qty), 5, 10)}}
+              </h5>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="pPL">
+            <th mat-header-cell *matHeaderCellDef> P P/L </th>
+            <td mat-cell *matCellDef="let each; let i = index;">
+              <h5 class="m-auto" *ngIf="getMaxTargetFromBR(each.inv_stock_id)!=-1">
+                {{roundFloat(((getMaxTargetFromBR(each.inv_stock_id) * each.inv_stock_qty) -
+                (each.inv_stock_cost_price * each.inv_stock_qty)))}}
+              </h5>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="remarks">
+            <th mat-header-cell *matHeaderCellDef>Remarks</th>
+            <td mat-cell *matCellDef="let each; let i = index;">
+              <h5 class='badge badge-secondary m-1' *ngFor="let tag of split(each.inv_remarks)">
+                {{trim(tag)}}
+              </h5>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="action">
+            <th mat-header-cell *matHeaderCellDef> </th>
+            <td mat-cell *matCellDef="let each; let i = index;">
+              <!-- <button mat-stroked-button (click)="sellInvestment(each.inv_id)"><mat-icon>sell</mat-icon></button> -->
+              <!-- <button mat-icon-button (click)="removeInvestment(each.inv_id)">
+                <mat-icon>cancel</mat-icon>
+              </button> -->
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="expandedDetail">
+            <td mat-cell *matCellDef="let element;" [attr.colspan]="displayedColumnsPortfolio.length">
+
+                <table mat-table [dataSource]="getInvestmentForStock(element.inv_stock_id)" 
+                *ngIf="expandedStockId == element.inv_stock_id">
+
+       
+                  <ng-container matColumnDef="qty">
+                    <th mat-header-cell *matHeaderCellDef>Quantity</th>
+                    <td mat-cell *matCellDef="let inv"> {{inv.inv_stock_qty}} </td>
+                  </ng-container>
+                
+         
+                  <ng-container matColumnDef="price">
+                    <th mat-header-cell *matHeaderCellDef> Price </th>
+                    <td mat-cell *matCellDef="let inv"> {{roundFloat(inv.inv_stock_cost_price)}} </td>
+                  </ng-container>
+                
+             
+                  <ng-container matColumnDef="date">
+                    <th mat-header-cell *matHeaderCellDef> Date </th>
+                    <td mat-cell *matCellDef="let inv"> {{inv.inv_datetime}}</td>
+                  </ng-container>
+
+                  <ng-container matColumnDef="cost">
+                    <th mat-header-cell *matHeaderCellDef> Cose </th>
+                    <td mat-cell *matCellDef="let inv"> {{roundFloat(inv.inv_stock_qty*inv.inv_stock_cost_price)}}</td>
+                  </ng-container>
+
+                  <ng-container matColumnDef="action">
+                    <th mat-header-cell *matHeaderCellDef> </th>
+                    <td mat-cell *matCellDef="let each; let i = index;">
+                      <!-- <button mat-stroked-button (click)="sellInvestment(each.inv_id)"><mat-icon>sell</mat-icon></button> -->
+                      <button mat-icon-button (click)="removeInvestment(each.inv_id)">
+                        <mat-icon>cancel</mat-icon>
+                      </button>
+                    </td>
+                  </ng-container>
+
+                
+                  <tr mat-header-row *matHeaderRowDef="displayedColumnsInner"></tr>
+                  <tr mat-row *matRowDef="let row; columns: displayedColumnsInner;"></tr>
+                </table>
+
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumnsPortfolio; sticky: true"></tr>
+          <tr mat-row *matRowDef="let element; columns: displayedColumnsPortfolio;"
+            
+            (click)="expandedStockId = expandedStockId === element.inv_stock_id? null: element.inv_stock_id"
+          ></tr>
+          <tr mat-row *matRowDef="let row; columns: ['expandedDetail']" class="example-detail-row"></tr>
+
+        </table>
+      </div>
+      <br>
+      <div class="row">
+        <div class="col-6 card" style="height: 300px;">
+          <div class="card-header">
+            Top Gainers
+            <span class="badge badge-primary">
+              {{getLen(topGainers | appFilter: eventKW : allStocks : 'stock_id')}}
+            </span>
+          </div>
+          <div class="card-body p-0" style="overflow-y: auto;">
+            <ul class="list-group m-0">
+              <li class="list-group-item list-group-item-action m-0"
+             
+                *ngFor="let item of topGainers | appFilter: eventKW : allStocks : 'stock_id'" (click)="changeStock(item.stockId)">
+                {{getStockFromId(item.stockId).stock_name}}
+                <div class="float-right">
+                  <div class="badge badge-info p-1">
+                    {{getStockFromId(item.stockId).stock_latest_price}}
+                  </div>
+                  <div class="badge badge-success p-1">
+                    {{roundFloat(item.delta)}}
+                    <!-- <mat-icon class="m-0">arrow_drop_up</mat-icon> -->
+                  </div>
+                </div>
+
+              </li>
+
+            </ul>
+          </div>
+
+
+        </div>
+
+        <div class="col-6 card" style="height: 300px;">
+          <div class="card-header">
+            Top Losers
+            <span class="badge badge-primary">
+              {{getLen(topLosers | appFilter: eventKW : allStocks : 'stock_id')}}
+            </span>
+          </div>
+          <div class="card-body p-0" style="overflow-y: auto;">
+            <ul class="list-group m-0">
+              <li class="list-group-item list-group-item-action m-0"
+
+                *ngFor="let item of topLosers | appFilter: eventKW : allStocks : 'stock_id'" (click)="changeStock(item.stockId)">
+                {{getStockFromId(item.stockId).stock_name}}
+                <div class="float-right">
+                  <div class="badge badge-info p-1">
+                    {{getStockFromId(item.stockId).stock_latest_price}}
+                  </div>
+                  <div class="badge badge-danger p-1">
+                    {{roundFloat(item.delta)}}
+                    <!-- <mat-icon class="m-0">arrow_drop_up</mat-icon> -->
+                  </div>
+                </div>
+
+              </li>
+
+            </ul>
+          </div>
+
+
+        </div>
+      </div>
+
+
+
+    </div>
+
 
 
 
@@ -476,6 +934,6 @@
       Alerts
     </div>
   </div> -->
+  </div>
   <hr>
-  
 </div>

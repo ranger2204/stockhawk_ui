@@ -2,13 +2,13 @@ import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import {FormControl} from '@angular/forms';
 import { StockService } from '../../services/stock.service';
 import * as Highcharts from 'highcharts';
-import { ObjectUnsubscribedError } from 'rxjs';
+
 import { FilterPipe } from '../../pipes/filter.pipe'
 
 export class Stock{
   stock_name: string = "";
   stock_category: string = "";
-  stock_id: number = undefined;
+  stock_id: number = null;
 
   constructor(){}
 }
@@ -19,9 +19,15 @@ export class Stock{
 })
 export class AnalyticsComponent implements OnInit {
 
+  @ViewChild('phmode') phmodeTab: ElementRef;
+
   stockAutoCompleteList = []
-  stockAutoCompleteTO = undefined;
-  filterPipe = undefined;
+  stockAutoCompleteTO = null;
+  topChangersTO =  null;
+  topValueTO = null;
+  valuePicksTO = null;
+  livePriceInterval = null
+  filterPipe = null;
 
   agmDetails = []
   dealDetails = []
@@ -31,11 +37,16 @@ export class AnalyticsComponent implements OnInit {
   topMFStocks = []
   newsDetails = []
   quarterDetails = []
+  brokerRatings = {}
   competitionDetails = [];
   brDetails = [];
 
+  topGainers = []
+  topLosers = []
+  topValue = []
+
   equityMetric = "latest"
-  stockMaxPrice = 100
+  stockMaxPrice = 3000
 
   refreshInProgress = false
 
@@ -56,29 +67,30 @@ export class AnalyticsComponent implements OnInit {
   eventKW = "";
 
   historyLB = 30;
+  changeLB = 1
   allStocks = []
 
   displayedColumns = {
     'deals': [
-      'stockName', 'dealType', 'dealTransType', 'dealTitle','dealPrice', 'dealQty', 'dealDate'
+      'stockName', 'curPrice', 'dealType', 'dealTransType', 'dealTitle','dealPrice', 'dealQty', 'dealDate'
     ],
     'dividends': [
-      'stockName', 'divType', 'divEffectiveDate', 'divAnnoDate','divRemarks'
+      'stockName', 'curPrice', 'divType', 'divEffectiveDate', 'divAnnoDate','divRemarks'
     ],
     'agm': [
-      'stockName', 'agmPurpose', 'agmDate', 'agmAnnoDate','agmRemarks'
+      'stockName', 'curPrice', 'agmPurpose', 'agmDate', 'agmAnnoDate','agmRemarks'
     ],
     'bm': [
-      'stockName', 'bmRemarks', 'bmDate'
+      'stockName', 'curPrice', 'bmRemarks', 'bmDate'
     ],
     'insider': [
-      'stockName', 'name', 'category', 'transactionDate', 'qty', 'price', 'action', 'mode', 'holding'
+      'stockName', 'name', 'category', 'transactionDate', 'qty', 'curPrice','price', 'action', 'mode', 'holding'
     ],
     'br': [
-      'stockName', 'organization', 'flag', 'recDate', 'curPrice', 'recPrice', 'targetPrice', 'margin'
+      'stockName', 'organization', 'flag', 'recDate', 'curPrice', 'recPrice', 'targetPrice', 'margin', 'valid_flag', 'check_flag'
     ],
     'news': [
-      'stockName', 'newsDate', 'newsHead'
+      'stockName', 'curPrice', 'newsDate', 'newsHead'
     ]
   }
 
@@ -99,11 +111,24 @@ export class AnalyticsComponent implements OnInit {
     private stockService: StockService,
   ) { }
 
+  // public ngAfterViewInit(): void {
+  //   console.log(this.phmodeTab.nativeElement)
+  // }
+
   ngOnInit(): void {
     this.currentStock = new Stock()
     this.filterPipe = new FilterPipe()
+    
     this.getAllStocks()
     this.getSectors()
+    this.getTopChangers()
+    this.getTopValue()
+    
+  }
+
+  ngOnDestroy(): void{
+    if(this.livePriceInterval != null)
+      clearInterval(this.livePriceInterval)
   }
 
   filterDataWithPipe(array, keyword, id_){
@@ -164,6 +189,59 @@ export class AnalyticsComponent implements OnInit {
     // this.onChangePage(event, this.brDetails, 'brDetails')
   }
 
+  getTopValue(){
+
+    if(this.topValueTO != null)
+     clearInterval(this.topValueTO)
+
+    this.topValue = []
+
+    this.topValueTO = setTimeout(() => {
+      
+      this.stockService.getTopChangers(-1, 'topvalue').subscribe( data => {
+        this.topValue = data['topvalue']
+        this.topValue = this.topValue.filter(
+          (item) => {
+            let stockObj = this.getStockFromId(item.stock_id)
+            return stockObj.stock_current_price <= this.stockMaxPrice?true:false
+          }
+        )
+        this.topValue.sort((a, b) => b.mean_profit - a.mean_profit)
+      })
+    }, 1000)
+
+  }
+
+  getTopChangers(){
+
+    if(this.topChangersTO != null)
+     clearInterval(this.topChangersTO)
+
+    this.topGainers = []
+    this.topLosers = []
+
+    this.topChangersTO = setTimeout(() => {
+      this.stockService.getTopChangers(this.changeLB, 'toplosers').subscribe( data => {
+        this.topLosers = data['toplosers']
+        this.topLosers = this.topLosers.filter(
+          (item) => {
+            let stockObj = this.getStockFromId(item.stock_id)
+            return stockObj.stock_current_price <= this.stockMaxPrice?true:false
+          }
+        )
+      })
+      this.stockService.getTopChangers(this.changeLB, 'topgainers').subscribe( data => {
+        this.topGainers = data['topgainers']
+        this.topGainers = this.topGainers.filter(
+          (item) => {
+            let stockObj = this.getStockFromId(item.stock_id)
+            return stockObj.stock_current_price <= this.stockMaxPrice?true:false
+          }
+        )
+      })
+    }, 500)
+      
+  }
 
   getCommonStocks(){
 
@@ -179,10 +257,65 @@ export class AnalyticsComponent implements OnInit {
     })
   }
 
+  toggleBrokerRes(brokres_id){
+    console.log("Toggling "+brokres_id)
+    this.stockService.updateBrokresValidity(brokres_id).subscribe(data => {
+      let obj = data['brokres_validity_update'][0]
+      this.brDetails.forEach(item => {
+        if(item.brokres_id == brokres_id){
+          item.brokres_rec_valid_flag = !item.brokres_rec_valid_flag
+        }
+      })
+    })
+  }
 
-  updateAllStocks(){
+  checkBrokerRes(brokres_id){
+    console.log("Checking "+brokres_id)
+    this.stockService.checkBrokres(brokres_id).subscribe(data => {
+      let changed = data['brokres_stock_check_update'][0]
+      console.log(changed)
+      if(changed){
+        this.getBrokRes()
+      }
+      // this.brDetails.forEach(item => {
+      //   if(item.brokres_id == brokres_id){
+      //     item.brokres_rec_valid_flag = !item.brokres_rec_valid_flag
+      //   }
+      // })
+    })
+  }
+
+  updateStockDetails(updateList){
+
+    this.stockService.updateStockDetails([this.currentStock], updateList).subscribe( data => {
+      this.getPriceHistory()
+    })
+  }
+
+
+  updateAllStocks(updateList=[]){
     this.refreshInProgress = true;
-
+    if(updateList.length == 0)
+      updateList = [
+        'insider-transaction',
+        'income-statement',
+        // 'income-statement-standalone',
+        'balance-sheet',
+        'ratios',
+        'cash-flow',
+        'price-history',
+        'dividends',
+        'board-meetings',
+        'annoucements',
+        'agm-egm',
+        'broker-research',
+        'block-deals',
+        'bulk-deals',
+        'quarterly-results',
+        'shareholding',
+        // 'broker-research-2',
+        'news'
+      ]
     this.stockService.getAllStocksDetails().subscribe( async data => {
       let stocks = data['stocks'];
       console.table(stocks.length)
@@ -190,12 +323,20 @@ export class AnalyticsComponent implements OnInit {
       let chunkSize = 10
       let currentChunkIndex = 0
 
+      stocks = stocks.sort(
+        (a, b) =>  {
+          return a.stock_price_update_datetime > b.stock_price_update_datetime ? 1 : -1
+        }
+      )
+
+      console.table(stocks.slice(0, 20))
+
       for(let stock of stocks){
         stockChunk.push(stock)
         
         if(stockChunk.length == chunkSize){
           try {
-            await this.stockService.updateStockDetails(stockChunk).toPromise();
+            await this.stockService.updateStockDetails(stockChunk, updateList).toPromise();
           } catch (error) {
             //pass
           } finally{
@@ -208,7 +349,7 @@ export class AnalyticsComponent implements OnInit {
       }
 
       if(stockChunk.length > 0){
-        await this.stockService.updateStockDetails(stockChunk).toPromise();
+        await this.stockService.updateStockDetails(stockChunk, updateList).toPromise();
       }
 
       this.refreshInProgress = false
@@ -231,6 +372,8 @@ export class AnalyticsComponent implements OnInit {
     let detailTypeSec = {}
 
     for(let i=0; i<dataArray.length; i++){
+      
+
       let detail = dataArray[i]
       if(Object.keys(detailTypeSec).indexOf(detail[actionKey]) == -1){
         detailTypeSec[detail[actionKey]] = {}
@@ -241,6 +384,10 @@ export class AnalyticsComponent implements OnInit {
     }
 
     for(let i=0; i<dataArray.length; i++){
+      if(actionKey.indexOf('brokres')!=-1){
+        if(dataArray[i]['brokres_rec_valid_flag'] == false)
+          continue
+      }
       let detail = dataArray[i]
       // console.log(detail[eqKey])
       detailTypeSec[detail[actionKey]][detail[eqKey]] = detailTypeSec[detail[actionKey]][detail[eqKey]] + 1
@@ -260,6 +407,7 @@ export class AnalyticsComponent implements OnInit {
     let index = this.selectedSectors.indexOf(sector)
     this.selectedSectors.splice(index, 1)
     console.log(this.selectedSectors)
+    this.getStocksBySector()
     // this.getStocksBySector(this.selectedSectors)
   }
 
@@ -292,7 +440,7 @@ export class AnalyticsComponent implements OnInit {
   getStockList(event) {
     
     let stockName: String = event.target.value
-    if (this.stockAutoCompleteTO != undefined) {
+    if (this.stockAutoCompleteTO != null) {
       clearTimeout(this.stockAutoCompleteTO)
     }
     if (stockName.length == 0)
@@ -311,24 +459,131 @@ export class AnalyticsComponent implements OnInit {
       this.stockAutoCompleteList = data['stocks']
       this.currentStock = this.stockAutoCompleteList[0]
       this.getAnalytics();
+      
     })
   }
 
   changePriceHistory(lookBack){
     this.historyLB = lookBack;
-    if(this.currentStock != undefined)
+    if(this.currentStock['stock_id'] != null)
       this.getPriceHistory()
   }
 
   getAnalytics(){
-      this.getPriceHistory()
-      this.getQuarterly();
-      this.getCompetition();
+      // this.getLivePriceHistory()
+      setTimeout(() => {
+        this.getQuarterly();
+        this.getCompetition();
+        this.getPriceBand();
+        this.changePriceTab()
+      }, 2000)
+  }
+
+  getPriceBand(){
+    //get prices from deals, insider and br
+    let priceBands = {
+      'deals-buy': [],
+      'insider-buy': [],
+      'deals-sell': [],
+      'insider-sell': [],
+      'br': [],
+    }
+
+    this.dealDetails.filter(item => item['deal_stock_id'] == this.currentStock.stock_id).forEach(item => {
+      if(item['deal_trans_type']=='Purchase')
+        priceBands['deals-buy'].push(parseFloat(item['deal_price']))
+      else if(item['deal_trans_type']=='Sell')
+        priceBands['deals-sell'].push(parseFloat(item['deal_price']))
+    })
+
+    this.insDetails.filter(item => item['ins_stock_id'] == this.currentStock.stock_id).forEach(item => {
+      if(item['ins_action']=='Acquisition')
+        priceBands['insider-buy'].push(parseFloat(item['ins_price']))
+      else  if(item['ins_action']=='Disposal')
+        priceBands['insider-sell'].push(parseFloat(item['ins_price']))
+    })
+
+    // console.table(this.brDetails.filter(item => item['brokres_stock_id'] == this.currentStock.stock_id))
+
+    this.brDetails.filter(item => item['brokres_stock_id'] == this.currentStock.stock_id).forEach(item => {
+      if(item['brokres_rec_flag']=='BUY' && item['brokres_rec_valid_flag'])
+        priceBands['br'].push(parseFloat(item['brokres_target']))
+    })
+
+    this.drawPriceBand(priceBands, this.currentStock)
 
   }
 
+  changePriceTab(){
+    let tabIndex = this.phmodeTab['selectedIndex']
+
+    if(this.livePriceInterval != null)
+      clearInterval(this.livePriceInterval)
+
+    switch (tabIndex){
+      case 1: this.getLivePriceHistory()
+        break;
+      default: this.getPriceHistory()
+        break;
+    }
+  }
+
+  getLivePriceHistory(){
+    if(this.livePriceInterval != null)
+      clearInterval(this.livePriceInterval)
+
+    
+    let updatePrice = () => {
+
+      this.stockService.getPriceHistory(this.currentStock.stock_id, 1).subscribe(data => {
+        
+        let prices = []
+        let volumes = []
+        let maxVolume = 0;
+        let delta = parseInt(data['delta'])
+        // console.table(data['price_history'])
+        let timedelta = 9*60*60*1000
+        data['price_history'].forEach(item => {
+          prices.push(
+            [
+              new Date().setTime(Date.parse(item.stock_price_date) + timedelta),
+              item.stock_price_close
+            ]
+          )
+          volumes.push(
+            [
+              new Date().setTime(Date.parse(item.stock_price_date) + timedelta),
+              item.stock_price_volume
+            ]
+          )
+
+          if(maxVolume < item.stock_price_volume)
+            maxVolume = item.stock_price_volume
+          
+          timedelta += (delta*60*1000)
+        });
+
+        let priceVolume = [{
+          'name': 'Price',
+          'data': prices
+          
+        },{
+          'name': 'Volume',
+          'data': volumes,
+          'type': 'area',
+          'yAxis': 1,
+          // 'pointWidth': Math.max(1, 240.0/volumes.length)
+        }
+      ]
+        this.drawPriceHistory(priceVolume, maxVolume, this.currentStock.stock_name + " (Live)", "price-history-live");
+      });
+    }
+    updatePrice()
+    this.livePriceInterval = setInterval(updatePrice, 1000*60)
+  }
+
   getPriceHistory(){
-    this.stockService.getPriceHistory(this.currentStock, this.historyLB).subscribe(data => {
+    this.stockService.getPriceHistory(this.currentStock.stock_id, this.historyLB).subscribe(data => {
       
       let prices = []
       let volumes = []
@@ -361,12 +616,12 @@ export class AnalyticsComponent implements OnInit {
       },{
         'name': 'Volume',
         'data': volumes,
-        'type': 'column',
+        'type': 'area',
         'yAxis': 1,
-        'pointWidth': Math.max(1, 240.0/volumes.length)
+        // 'pointWidth': Math.max(1, 240.0/volumes.length)
       }
     ]
-      this.drawPriceHistory(priceVolume, maxVolume, this.currentStock.stock_name);
+      this.drawPriceHistory(priceVolume, maxVolume, this.currentStock.stock_name, "price-history");
     });
   }
 
@@ -406,6 +661,7 @@ export class AnalyticsComponent implements OnInit {
         let qdata = await this.stockService.getQuaterlyForStocks([item]).toPromise()
         // console.log(qdata['quarterly'])
         let metric = 0
+        // console.log(`Metric : ${this.equityMetric}`)
         if(this.equityMetric == 'mean')
           metric = this.getMean(qdata['quarterly'], 'qrtr_net_profit')
         else
@@ -528,6 +784,12 @@ export class AnalyticsComponent implements OnInit {
     this.stockService.getAGMforStocks().subscribe(data => {
       // console.table(data['deals'])
       this.agmDetails = data['agm']
+      this.agmDetails = this.agmDetails.filter(
+        (item) => {
+          let stockObj = this.getStockFromId(item.agm_stock_id)
+          return stockObj.stock_current_price <= this.stockMaxPrice?true:false
+        }
+      )
       this.pagedFiltered['agmDetails'] = this.agmDetails.slice(0, 30)
     })
   }
@@ -538,9 +800,18 @@ export class AnalyticsComponent implements OnInit {
     this.stockService.getNewsforStocks().subscribe(data => {
       // console.table(data['deals'])
       this.newsDetails = data['news']
+      this.newsDetails = this.newsDetails.filter(
+        (item) => {
+          let stockObj = this.getStockFromId(item.news_stock_id)
+          return stockObj.stock_current_price <= this.stockMaxPrice?true:false
+        }
+      )
+
       this.pagedFiltered['newsDetails'] = this.newsDetails.slice(0, 30)
     })
   }
+
+
 
   getDeals(){
     this.dealDetails = []
@@ -548,6 +819,12 @@ export class AnalyticsComponent implements OnInit {
     this.stockService.getDealsforStocks().subscribe(data => {
       // console.table(data['deals'])
       this.dealDetails = data['deals']
+      this.dealDetails = this.dealDetails.filter(
+        (item) => {
+          let stockObj = this.getStockFromId(item.deal_stock_id)
+          return stockObj.stock_current_price <= this.stockMaxPrice?true:false
+        }
+      )
       let dealCounts = this.getDistribution(this.dealDetails)
       
       // console.log(dealCounts)
@@ -591,6 +868,12 @@ export class AnalyticsComponent implements OnInit {
     this.stockService.getInsforStocks().subscribe(data => {
       // console.table(data['deals'])
       this.insDetails = data['insider']
+      this.insDetails = this.insDetails.filter(
+        (item) => {
+          let stockObj = this.getStockFromId(item.ins_stock_id)
+          return stockObj.stock_current_price <= this.stockMaxPrice?true:false
+        }
+      )
       this.pagedFiltered['insDetails'] = this.insDetails.slice(0, 30)
 
     })
@@ -602,15 +885,56 @@ export class AnalyticsComponent implements OnInit {
     this.stockService.getBMforStocks().subscribe(data => {
       // console.table(data['deals'])
       this.bmDetails = data['bm']
+      this.bmDetails = this.bmDetails.filter(
+        (item) => {
+          let stockObj = this.getStockFromId(item.bm_stock_id)
+          return stockObj.stock_current_price <= this.stockMaxPrice?true:false
+        }
+      )
       this.pagedFiltered['bmDetails'] = this.bmDetails.slice(0, 30)
+      // console.log(this.pagedFiltered['bmDetails'])
 
     })
   }
 
+  getAvg(nums: []){
+    const total = nums.reduce((acc, c) => acc + c, 0)
+    return Math.round(total/nums.length)
+  }
+
+  getBrokerRatings(){
+    this.stockService.getBrokerRatings().subscribe(data => {
+      this.brokerRatings = data['brokerrating'][0]
+      
+      let brokers = Object.keys(this.brokerRatings)
+      for(let i=0; i<brokers.length;i++){
+        let br = brokers[i]
+        this.brokerRatings[br]['min_date_diffs'] = Math.min(...this.brokerRatings[br]['date_diffs'])
+        this.brokerRatings[br]['max_date_diffs'] = Math.max(...this.brokerRatings[br]['date_diffs'])
+        this.brokerRatings[br]['mean_date_diffs'] = this.getAvg(this.brokerRatings[br]['date_diffs'])
+
+      }
+      console.log(this.brokerRatings)
+      this.getBrokRes();
+    })
+  }
+
   updateValuePicks(){
-    this.getDeals()
-    this.getBrokRes()
-    this.getTopMFHoldings()
+    if(this.valuePicksTO != null)
+      clearTimeout(this.valuePicksTO)
+    this.valuePicksTO = setTimeout(() => {
+      this.getDeals()
+      this.getBrokRes()
+      this.getTopMFHoldings()
+      this.getIns();
+      this.getNews();
+      this.getTopChangers();
+      this.getTopValue();
+      this.getBM();
+      this.getAGM();
+      this.getDividends();
+    }, 1500)
+    
   }
 
   getTopMFHoldings(){
@@ -620,11 +944,11 @@ export class AnalyticsComponent implements OnInit {
       this.topMFStocks = data['topmfholdings']
       let dataSeries = []
       this.topMFStocks.forEach(item => {
-        let stockObj = this.getStockFromId(item[0])
+        let stockObj = this.getStockFromId(item.stock_id)
         if(stockObj.stock_current_price <= this.stockMaxPrice)
           dataSeries.push({
             'name': stockObj.stock_name,
-            'data': [item[1]]
+            'data': [item['#mfs']]
           })
       })
       let top_items = dataSeries.splice(0, this.TOP_N)
@@ -646,8 +970,14 @@ export class AnalyticsComponent implements OnInit {
     this.brDetails = []
 
     this.stockService.getBrokResforStocks().subscribe(data => {
-      // console.table(data['dividends'])
+      // console.table(data['broker-research'])
       this.brDetails = data['broker-research']
+      this.brDetails = this.brDetails.filter(
+        (item) => {
+          let stockObj = this.getStockFromId(item.brokres_stock_id)
+          return stockObj.stock_current_price <= this.stockMaxPrice?true:false
+        }
+      )
       let brCounts = this.getDistribution(this.brDetails, 'brokres_rec_flag', 'brokres_stock_id')
       
       // console.log(brCounts)
@@ -689,7 +1019,14 @@ export class AnalyticsComponent implements OnInit {
     this.stockService.getDividendForStocks().subscribe(data => {
       // console.table(data['dividends'])
       this.divDetails = data['dividends']
+      this.divDetails = this.divDetails.filter(
+        (item) => {
+          let stockObj = this.getStockFromId(item.div_stock_id)
+          return stockObj.stock_current_price <= this.stockMaxPrice?true:false
+        }
+      )
       this.pagedFiltered['divDetails'] = this.divDetails.slice(0, 30)
+      console.log(this.pagedFiltered['divDetails'])
 
     })
   }
@@ -714,10 +1051,12 @@ export class AnalyticsComponent implements OnInit {
   }
 
   getAllStocks(){
+    
     this.allStocks = []
     this.stockService.getAllStocksDetails().subscribe(data => {
       this.allStocks = data['stocks']
-      this.getBrokRes();
+      this.getBrokerRatings()
+      
       this.getIns();
       this.getAGM();
       this.getBM();
@@ -766,7 +1105,7 @@ export class AnalyticsComponent implements OnInit {
       plotOptions: {
         scatter: {
             marker: {
-                radius: 5,
+                radius: 3,
                 states: {
                     hover: {
                         enabled: true,
@@ -883,6 +1222,168 @@ export class AnalyticsComponent implements OnInit {
 
   }
 
+  getCount(arr: Array<Number>, value: Number){
+    let count = 0
+    arr.forEach(item => {
+      if(item == value)
+        count += 1
+    })
+    return count
+  }
+
+  getLatestCount(dataArray: Array<any>, key_: string){
+    let latestValue = null
+    let newCount = 0
+    // console.table(dataArray.slice(0,10))
+    // console.log(`Key : ${key_}`)
+    dataArray.forEach(item => {
+      if(latestValue == null || latestValue < item[key_])
+        latestValue = item[key_]
+    })
+
+    // console.log(`Latest value : ${latestValue}`)
+    dataArray.forEach(item => {
+      if(latestValue == item[key_])
+        newCount += 1
+    })
+    return {
+      'newCount': newCount,
+      'lValue': latestValue
+    }
+  }
+
+  drawPriceBand(priceBands, stock, divId="price-bands") {
+
+    let priceCategories = []
+
+    Object.keys(priceBands).forEach(item => {
+      priceBands[item].forEach(element => {
+        if(priceCategories.indexOf(element) == -1)
+          priceCategories.push(element)
+      });
+    })
+
+    
+    if(priceCategories.indexOf(stock['stock_current_price']) == -1)
+      priceCategories.push(stock['stock_current_price'])
+    
+    console.log(priceCategories)
+    console.log(stock)
+    priceCategories.sort((a,b) => b-a)
+
+    // console.log(priceCategories)
+
+    // let tempPC = []
+    // let start = Math.round(priceCategories[0] + 1)
+    // priceCategories.forEach(p => {
+    //   while(start>p){
+    //     tempPC.push(start)
+    //     start -= 1
+    //   }
+    //   tempPC.push(p)
+    //   start = Math.round(p-1)
+    // })
+
+    // priceCategories = tempPC.sort((a,b) => b-a)
+
+    // console.log(stock)
+    // console.log(priceCategories)
+
+    let dataSeries = [
+      {
+        name: 'Insider-SELL',
+        data: []
+      },
+      {
+        name: 'Deals-SELL',
+        data: []
+      },
+      {
+        name: 'Insider-BUY',
+        data: []
+      },
+      {
+        name: 'Deals-BUY',
+        data: []
+      },
+      {
+        name: 'Current',
+        data: [],
+        // dashStyle: 'dash',
+      },
+      {
+        name: 'BrokerResearch',
+        data: []
+      }
+    ]
+
+
+    priceCategories.forEach(i => {
+      if(priceBands['insider-sell'].indexOf(i)!=-1)
+        dataSeries[0]['data'].push(this.getCount(priceBands['insider-sell'],i))
+      else
+        dataSeries[0]['data'].push(0)
+      
+      if(priceBands['deals-sell'].indexOf(i)!=-1)
+        dataSeries[1]['data'].push(this.getCount(priceBands['deals-sell'],i))
+      else
+        dataSeries[1]['data'].push(0)
+
+      if(priceBands['insider-buy'].indexOf(i)!=-1)
+        dataSeries[2]['data'].push(this.getCount(priceBands['insider-buy'],i))
+      else
+        dataSeries[2]['data'].push(0)
+      
+      if(priceBands['deals-buy'].indexOf(i)!=-1)
+        dataSeries[3]['data'].push(this.getCount(priceBands['deals-buy'],i))
+      else
+        dataSeries[3]['data'].push(0)
+      
+      if(priceBands['br'].indexOf(i)!=-1)
+        dataSeries[5]['data'].push(this.getCount(priceBands['br'],i))
+      else
+        dataSeries[5]['data'].push(0)
+      
+      if(stock.stock_current_price == i)
+        dataSeries[4]['data'].push(1)
+      else
+        dataSeries[4]['data'].push(0)
+    })
+
+    let chartOptions = {
+    chart: {
+        type: 'bar'
+      },
+      title: {
+        text: "Price Band "+stock['stock_name']
+      },
+      legend: {
+          enabled: true
+      },
+      xAxis: {
+        categories: priceCategories
+      },
+
+      yAxis: {
+        labels: {
+          overflow: 'justify'
+        }
+      },
+      
+      plotOptions: {
+        series: {
+          marker: {
+              enabled: true
+          },
+        }
+      },
+
+      series: dataSeries
+    }
+  
+    Highcharts.chart(divId, chartOptions as Highcharts.Options)
+  }
+
   drawDistribution(divId="deals-distribution", distName="Top Deals", dataSeries=[]) {
 
     let stocks = []
@@ -945,8 +1446,18 @@ export class AnalyticsComponent implements OnInit {
     Highcharts.chart(divId, chartOptions as Highcharts.Options)
   }
 
-  drawPriceHistory(priceVolume, maxVolume, stockName) {
+  updateCommonData(){
+    this.stockService.fetchCommonData().subscribe(data => {
+      console.log("Updated Common Data");
+      this.updateValuePicks()
+    })
+  }
+
+  drawPriceHistory(priceVolume, maxVolume, stockName, div) {
     let chartOptions = {
+      chart: {
+        type: 'line'
+      },
       title: {
         text: 'Price Trend - '+stockName
       },
@@ -974,7 +1485,7 @@ export class AnalyticsComponent implements OnInit {
       plotOptions: {
         series: {
             marker: {
-                enabled: true
+                enabled: false
             },
             // showCheckbox: true
         }
@@ -988,7 +1499,9 @@ export class AnalyticsComponent implements OnInit {
       series: priceVolume
     }
   
-    Highcharts.chart('price-history', chartOptions as Highcharts.Options)
+    Highcharts.chart(div, chartOptions as Highcharts.Options)
   }
 }
+
+
 

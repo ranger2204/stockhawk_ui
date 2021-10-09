@@ -18,6 +18,27 @@ export class StockService {
     })
   }
 
+  getAllIndices(){
+    return this.http.get(`${environment.baseUrl}/api/index`, {
+      params: {
+        'all': '1'
+      }
+    })
+  }
+
+  getIndexPriceHistory(ind, lookBack=90){
+    return this.http.get(`${environment.baseUrl}/api/index`, {
+      params: {
+        'index_id': ind.ind_id.toString(),
+        'history': lookBack.toString()
+      }
+    })
+  }
+
+  fetchCommonData(){
+    return this.http.get(`${environment.baseUrl}/api/common`)
+  }
+
   getStocksBySector(sector){
     return this.http.get(`${environment.baseUrl}/api/stock`, {
       params: {
@@ -34,10 +55,15 @@ export class StockService {
     })
   }
 
-  getPriceHistory(stock, lookBack=90){
+  async asyncGetPriceHistory(stock_id, lookBack=90){
+    let data = await this.getPriceHistory(stock_id, lookBack).toPromise()
+    return data
+  }
+
+  getPriceHistory(stock_id, lookBack=90){
     return this.http.get(`${environment.baseUrl}/api/stock`, {
       params: {
-        'stock_id': stock.stock_id,
+        'stock_id': stock_id,
         'history': lookBack.toString()
       }
     })
@@ -130,7 +156,17 @@ export class StockService {
     })
   }
 
-  getTopMFHoldings(stocks=[]){
+  getBrokerRatings(){
+
+    return this.http.get(`${environment.baseUrl}/api/analytics`, {
+      params: {
+        'stockIds': '-1',
+        'type': 'brokerrating',
+      }
+    })
+  }
+
+  getTopMFHoldings(stocks=[], n=50){
     if(stocks.length == 0){
       stocks = [{
         'stock_id': -1
@@ -141,13 +177,35 @@ export class StockService {
       if(stockIds.indexOf(stock.stock_id) == -1)
         stockIds.push(stock.stock_id)
     });
-    return this.http.get(`${environment.baseUrl}/api/stock/details`, {
+    return this.http.get(`${environment.baseUrl}/api/analytics`, {
       params: {
         'stockIds': stockIds.join(','),
         'type': 'topmfholdings',
+        'n': n.toString()
       }
     })
   }
+
+  getTopChangers(window=60, detail='toplosers'){
+    let stocks = [{
+      'stock_id': -1
+    }]
+ 
+    let stockIds = []
+    stocks.forEach(stock => {
+      if(stockIds.indexOf(stock.stock_id) == -1)
+        stockIds.push(stock.stock_id)
+    });
+    return this.http.get(`${environment.baseUrl}/api/analytics`, {
+      params: {
+        'stockIds': stockIds.join(','),
+        'type': detail,
+        'window': window.toString(),
+        'n': '1000'
+      }
+    })
+  }
+
 
   getDealsforStocks(stocks=[]){
     if(stocks.length == 0){
@@ -246,7 +304,46 @@ export class StockService {
     })
   }
 
-  updateStockDetails(stocks){
+  updateBrokresValidity(brokres_id: String){
+    return this.http.get(`${environment.baseUrl}/api/analytics`, {
+      params: {
+        'Ids': brokres_id.toString(),
+        'action': 'update',
+        'type': 'brokres_validity_update'
+      }
+    })
+  }
+
+  checkBrokres(brokres_id: String){
+    return this.http.get(`${environment.baseUrl}/api/analytics`, {
+      params: {
+        'Ids': brokres_id.toString(),
+        'action': 'update',
+        'type': 'brokres_stock_check_update'
+      }
+    })
+  }
+
+  updateStockDetails(stocks, updateList){
+    if(updateList.length == 0)
+      updateList = ['insider-transaction',
+      'income-statement',
+      'income-statement',
+      'balance-sheet',
+      'ratios',
+      'cash-flow',
+      'price-history',
+      'dividends',
+      'board-meetings',
+      'annoucements',
+      'agm-egm',
+      'broker-research',
+      'block-deals',
+      'bulk-deals',
+      'quarterly-results',
+      'shareholding',
+      'news']
+
     // console.table(stocks)
     let stockIds = []
     stocks.forEach(stock => {
@@ -256,7 +353,8 @@ export class StockService {
     return this.http.get(`${environment.baseUrl}/api/stock/details`, {
       params: {
         'stockIds': stockIds.join(','),
-        'action': 'update'
+        'action': 'update',
+        'updateList': updateList.join(',')
       }
     })
   }

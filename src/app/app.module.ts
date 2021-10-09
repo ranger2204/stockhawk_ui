@@ -27,6 +27,10 @@ import {MatSortModule} from '@angular/material/sort';
 import {MatButtonToggleModule} from '@angular/material/button-toggle';
 import {MatPaginatorModule} from '@angular/material/paginator';
 import {MatSliderModule} from '@angular/material/slider';
+import {MatTooltipModule} from '@angular/material/tooltip';
+import {MatDatepickerModule} from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
+import {MatSlideToggleModule} from '@angular/material/slide-toggle';
 
 import { AnalyticsComponent } from './components/analytics/analytics.component';
 import { VirtualMarketComponent } from './components/virtual-market/virtual-market.component';
@@ -35,9 +39,11 @@ import { DialogNewPF } from './components/virtual-market/virtual-market.componen
 import { PortfolioService } from './services/portfolio.service';
 import { StockService } from './services/stock.service';
 
+
 import { Investment } from './models/Investment'
 
 import { FilterPipe } from './pipes/filter.pipe'; 
+
 
 @NgModule({
   declarations: [
@@ -75,7 +81,11 @@ import { FilterPipe } from './pipes/filter.pipe';
     MatProgressBarModule,
     MatButtonToggleModule,
     MatPaginatorModule,
-    MatSliderModule
+    MatSliderModule,
+    MatTooltipModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
+    MatSlideToggleModule
   ],
   providers: [
     PortfolioService,
