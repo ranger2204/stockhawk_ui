@@ -532,7 +532,12 @@ export class AnalyticsComponent implements OnInit {
     if(this.livePriceInterval != null)
       clearInterval(this.livePriceInterval)
 
-    
+    let date = new Date()
+    if(date.getDay() == 0 || date.getDay() == 6){
+      alert("Market Holiday")
+      return
+    }
+      
     let updatePrice = () => {
 
       this.stockService.getPriceHistory(this.currentStock.stock_id, 1).subscribe(data => {
@@ -578,8 +583,12 @@ export class AnalyticsComponent implements OnInit {
         this.drawPriceHistory(priceVolume, maxVolume, this.currentStock.stock_name + " (Live)", "price-history-live");
       });
     }
+
     updatePrice()
-    this.livePriceInterval = setInterval(updatePrice, 1000*60)
+    if(date.getHours() < 16 && date.getHours() > 9)
+      this.livePriceInterval = setInterval(updatePrice, 1000*60)
+    else
+      console.log("No refresh after market hrs")
   }
 
   getPriceHistory(){

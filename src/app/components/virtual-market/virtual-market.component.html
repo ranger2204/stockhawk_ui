@@ -819,11 +819,11 @@
              
                   <ng-container matColumnDef="date">
                     <th mat-header-cell *matHeaderCellDef> Date </th>
-                    <td mat-cell *matCellDef="let inv"> {{inv.inv_datetime}}</td>
+                    <td mat-cell *matCellDef="let inv"> {{dtimeToDate(inv.inv_datetime)}}</td>
                   </ng-container>
 
                   <ng-container matColumnDef="cost">
-                    <th mat-header-cell *matHeaderCellDef> Cose </th>
+                    <th mat-header-cell *matHeaderCellDef> Cost </th>
                     <td mat-cell *matCellDef="let inv"> {{roundFloat(inv.inv_stock_qty*inv.inv_stock_cost_price)}}</td>
                   </ng-container>
 

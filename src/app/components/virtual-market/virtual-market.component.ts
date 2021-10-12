@@ -137,6 +137,11 @@ export class VirtualMarketComponent implements OnInit {
     })
   }
 
+  dtimeToDate(datetime){
+    let date = new Date(Date.parse(datetime))
+    return date.toLocaleDateString().slice(0, 10)
+  }
+
   filterDataWithPipe(array, keyword, id_){
     if(keyword.length == 0)
       return array
@@ -750,26 +755,29 @@ export class VirtualMarketComponent implements OnInit {
       list.push([date, value])
       return  list
     }
-
     let date = new Date()
-    let currentEpoch = Date.parse(date.toDateString()) + 9*60*60000
-    console.log(currentEpoch)
+    // let currentDate = `${date.}`
+    let timedelta = Date.parse(date.toDateString()) + (5.75+9)*60*60*1000
+    console.log(timedelta)
 
     this.investmentDetails.forEach((investment, index) => {
       let dataLive = []
       liveStockPH[investment.inv_stock_id].forEach((ph, index) => {
         if(index >= max_len)
           return
+
+        let t = index*60*1000 + timedelta
+        
         dataLive.push(
           [
-            index*60000+currentEpoch,
+            t,
             investment.inv_stock_qty * ph[priceType],
             // investment.inv_stock_qty * investment.inv_stock_cost_per_share
           ]
         )
 
         totalLive = updateTotal(
-          totalLive, index*60000+currentEpoch, 
+          totalLive, t,
           investment.inv_stock_qty * ph[priceType]
         )
 
