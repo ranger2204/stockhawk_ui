@@ -1,30 +1,148 @@
-<mat-grid-list cols="4" rowHeight="100px">
+<mat-grid-list cols="4" rowHeight="20px">
   <mat-grid-tile
       colspan='2'
-      rowspan='1'
+      rowspan='6'
     >
-    <mat-toolbar color="primary">
-      <h2>StockHawk</h2>
+
+    <mat-toolbar color="primary" style="height: 85px;" class="justify-content-end p-0">
+      <a href="/index.html" class="text-light float-left"><h2>StockHawk</h2></a>
+      
+      <div class="btn-group btn-group-sm ml-5 float-right" role="group">
+        <div class="btn-group-vertical btn-group-sm rounded-0" role="group" *ngFor="let index of indexDetails" title="{{index['update_timestamp']}}"  style="width: 100px; font-size:6px !important;">
+          <button class="btn btn-light rounded-0" style="font-size: small;">
+            <a href="{{index['index_url']}}">
+              {{index['index']}}
+            </a>
+          </button>
+          <button style="font-size: small;" class="btn" 
+          [class.btn-danger]="index['price_current'] <= index['price_prev']" [class.btn-success]="index['price_current'] > index['price_prev']"
+          >
+            {{roundFloat(toFloat(index['price_current']))}}
+          </button>
+          <button class="btn btn-light rounded-0" style="font-size: small;" [class.text-danger]="toFloat(index['price_change']) < 0" [class.text-success]="toFloat(index['price_change']) > 0">
+            {{roundFloatWithSign(toFloat(index['price_change']))}} 
+            <span class="font-light" style="font-size: x-small;">
+              ({{roundFloat(toFloat(index['price_change_perc']))}}%)
+            </span>
+          </button>
+        </div>
+       </div>
+
     </mat-toolbar>
+    
     
   </mat-grid-tile>
   <mat-grid-tile
       colspan='2'
-      rowspan='1'
+      rowspan='6'
     >
     <nav mat-tab-nav-bar>
-      <a mat-tab-link  routerLink="/analytics" routerLinkActive="is-active">
-        <span matBadge="{{stockCount}}" matBadgeOverlap="false" matBadgeColor="warn">Analytics</span>
+      <a mat-tab-link  routerLink="/analytics" routerLinkActive="is-active" style="text-decoration : none">
+        <h3 class="m-0">
+          Analytics <span class="badge badge-warning">{{stockCount}}</span>
+        </h3>
       </a>
-      <a mat-tab-link  routerLink="/virtualmarket" routerLinkActive="is-active">
-        <span matBadge="{{portfolioCount}}" matBadgeOverlap="false" matBadgeColor="warn">Virtual Market</span>
+      <a mat-tab-link  routerLink="/virtualmarket" routerLinkActive="is-active" style="text-decoration : none">
+        <h3 class="m-0">
+          Virtual Market <span class="badge badge-warning">{{portfolioCount}}</span>
+        </h3>
+        
       </a>
+      <a mat-tab-link  routerLink="/options" routerLinkActive="is-active" style="text-decoration : none">
+        <h3 class="m-0">
+          Options
+        </h3>
+        
+      </a>
+      <!-- <a mat-tab-link  routerLink="/virtualmarket" routerLinkActive="is-active">
+        <button mat-button matBadge="{{portfolioCount}}" matBadgeOverlap="false" matBadgeColor="warn">Virtual Market</button>
+      </a> -->
       <!-- <a mat-tab-link  routerLink="/holdings" routerLinkActive="is-active">Holdings</a> -->
     </nav>
+    <input type="text" [value]=baseURL (keyup)="updateBaseURL($event)">
   </mat-grid-tile>
-  
+  <!-- <mat-grid-tile
+    colspan='4'
+    rowspan='4'
+  >
+   
+    
+  </mat-grid-tile> -->
+    
 
+  
+  <table class="table-sm m-1" style="position: absolute; z-index: 10; right: 0; font-size: smaller; background: rgb(255, 255, 255);">
+    <tr>
+      
+        <button mat-button color="primary" (click)="toggleLiveBar()" class="mr-3">
+          <h3 class="m-auto">
+            <mat-icon style="vertical-align: -6px;" *ngIf="animationState=='open'">chevron_right</mat-icon>
+            <mat-icon style="vertical-align: -6px;" *ngIf="animationState=='close'">chevron_left</mat-icon>
+            Live
+            <span class="badge badge-info"> {{getLen(liveNews)}}</span>
+            <span class="badge badge-danger"> {{getLen(liveAlerts)}}</span>
+  
+          </h3>
+          
+          
+          <!-- <span matBadge="{{getLen(liveNews)}}" matBadgeOverlap="false">News</span>
+          <span matBadge="{{getLen(liveAlerts)}}" matBadgeOverlap="false">Alerts</span> -->
+        </button>
+      
+    </tr>
+    <tr *ngIf="animationState=='open'">
+      <mat-tab-group>
+        <mat-tab label="News">
+          <div [@slideInOut]="animationState" style="max-height:90vh; overflow-y: auto; width: 500px;" >
+            <mat-card class="m-1 rounded-0"  *ngFor="let item of liveNews" style="font-size: small;">
+              <mat-card-title>
+                <h2>
+                  <a href="{{item.news_url}}">{{item.news_heading}}</a>
+                </h2>
+              </mat-card-title>
+              <mat-card-subtitle>
+                {{item.news_datetime}}
+                <span *ngIf="checkSubString(item.news_url, 'economictimes')" class="badge badge-danger">ET</span>
+                <span *ngIf="checkSubString(item.news_url, 'moneycontrol')" class="badge badge-success">MC</span>
+              </mat-card-subtitle>
+            </mat-card>
+          </div>
+        </mat-tab>
+        <mat-tab label="Alerts">
+          <div [@slideInOut]="animationState" style="max-height:600px; overflow-y: auto; width: 500px;" >
+            <mat-card class="m-1 rounded-0"  *ngFor="let item of liveAlerts">
+              <mat-card-title>
+                <h2>
+                  <a href="{{stockDetails[item.al_hst_stock_id].stock_site_url}}">{{stockDetails[item.al_hst_stock_id].stock_name}}</a> 
+                  <span class="badge badge-info m-1"> {{item.al_hst_cur_value}}</span>
+                  <span class="badge m-1"> {{item.al_hst_alert_value}}</span>
+                </h2>
+              </mat-card-title>
+              <mat-card-subtitle>
+                {{item.al_hst_datetime}}
+              </mat-card-subtitle>
+            </mat-card>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+        
+  
+        
+      
+    </tr>
+  
+  
+  
+  </table>
 </mat-grid-list>
+
+
+
+
+
+  
+  
+  
 
 
 <router-outlet></router-outlet>

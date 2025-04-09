@@ -36,8 +36,9 @@ export class FilterPipe implements PipeTransform {
         let ks = Object.keys(it)
         for(let i=0; i<ks.length; i++){
           if(ks[i] == key)
-            if(this.getStockFromId(it[ks[i]], allStocks).stock_name.toLocaleLowerCase().includes(searchText))
-              return true;
+            if(allStocks.length > 0)
+              if(this.getStockFromId(it[ks[i]], allStocks).stock_name.toLocaleLowerCase().includes(searchText))
+                return true;
 
           if(isNaN(it[ks[i]])){
             // console.log(it[ks[i]].toString())

@@ -1,25 +1,48 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
 import { HttpClient } from '@angular/common/http';
+import { Alert } from '../models/Alert';
+import { Todo } from '../models/Todo';
+
 @Injectable({
   providedIn: 'root'
 })
 export class StockService {
+  
+  baseURL = localStorage.getItem('ESBaseURL');
 
   constructor(
-    private http: HttpClient,
-  ) { }
+    private http: HttpClient
+  ) {}
 
   getStockByName(stockName){
-    return this.http.get(`${environment.baseUrl}/api/stock`, {
+    return this.http.get(`${this.baseURL}/api/stock`, {
       params: {
         'name': stockName
       }
     })
   }
 
+  getLiveNews(lastId=-1){
+    return this.http.get(`${this.baseURL}/api/live`, {
+      params: {
+        'live-type': 'live-news',
+        'live-last-id': lastId.toString()
+      }
+    })
+  }
+
+  getAllLiveIndex(window=30){
+
+    return this.http.get(`${this.baseURL}/api/live`, {
+      params: {
+        'live-type': 'live-index'
+      }
+    })
+  }
+
   getAllIndices(){
-    return this.http.get(`${environment.baseUrl}/api/index`, {
+    return this.http.get(`${this.baseURL}/api/index`, {
       params: {
         'all': '1'
       }
@@ -27,7 +50,7 @@ export class StockService {
   }
 
   getIndexPriceHistory(ind, lookBack=90){
-    return this.http.get(`${environment.baseUrl}/api/index`, {
+    return this.http.get(`${this.baseURL}/api/index`, {
       params: {
         'index_id': ind.ind_id.toString(),
         'history': lookBack.toString()
@@ -35,12 +58,118 @@ export class StockService {
     })
   }
 
+  addOption({stockId, expiryDate, strikePrice, optionType}){
+    return this.http.put(`${this.baseURL}/api/options`, {
+      stockId,
+      expiryDate,
+      strikePrice,
+      optionType
+    })
+  }
+
+  addOptionInvestment(optionId, buyDate, buyPrice, portfolioId){
+    return this.http.put(`${this.baseURL}/api/options/investments`, {
+      optionId,
+      buyDate,
+      buyPrice,
+      portfolioId
+    })
+  }
+
+  getAllOptionsInvestments(portfolioId=0){
+    return this.http.get(`${this.baseURL}/api/options/investments`, {
+      params: {
+        'action': 'fetch_all',
+        'portfolioId': portfolioId.toString()
+      }
+    })
+  }
+
+  
+
+  deleteInvestment(invId) {
+    return this.http.delete(`${this.baseURL}/api/options/investments`, {
+      params: {
+        'invId': invId.toString()
+      }
+    })
+  }
+
+  deleteOption(optionId) {
+    return this.http.delete(`${this.baseURL}/api/options`, {
+      params: {
+        'optionId': optionId.toString()
+      }
+    })
+  }
+
+  fetchAllOptions() {
+    return this.http.get(`${this.baseURL}/api/options`, {
+      params: {
+        'action': 'fetch_all'
+      }
+    })
+  }
+
+  getOptionsBet(){
+    return this.http.get(`${this.baseURL}/api/options`, {
+      params: {
+        'action': 'fetch_bet'
+      }
+    })
+  }
+
+  sellOptionInv(invId, sellPrice, sellDate){
+    console.log(sellDate)
+    const formData: any = {};
+    formData["invId"] = invId
+    formData['sellPrice'] = sellPrice
+    formData['sellDate'] = sellDate
+    return this.http.post(`${this.baseURL}/api/options/investments`, formData)
+  }
+
+
+  fetchLive(optionIds:String[]) {
+    return this.http.get(`${this.baseURL}/api/options`, {
+      params: {
+        'action': 'fetch_live',
+        'optionId': optionIds.join(',')
+      }
+    })
+  }
+
+  fetchAllLive(optionIds) {
+    return this.http.get(`${this.baseURL}/api/options`, {
+      params: {
+        'action': 'fetch_all_live',
+        'optionId': optionIds
+      }
+    })
+  }
+
+  getExpiryStrikePriceForStock(stock_id){
+    return this.http.get(`${this.baseURL}/api/options`, {
+      params: {
+        'stockId': stock_id.toString()
+      }
+    })
+  }
+
+  getOptionHistory(optionId){
+    return this.http.get(`${this.baseURL}/api/options`, {
+      params: {
+        'action': "history",
+        'optionId': optionId.toString()
+      }
+    })
+  }
+
   fetchCommonData(){
-    return this.http.get(`${environment.baseUrl}/api/common`)
+    return this.http.get(`${this.baseURL}/api/common`)
   }
 
   getStocksBySector(sector){
-    return this.http.get(`${environment.baseUrl}/api/stock`, {
+    return this.http.get(`${this.baseURL}/api/stock`, {
       params: {
         'sector': sector
       }
@@ -48,7 +177,7 @@ export class StockService {
   }
 
   getAllSectors(){
-    return this.http.get(`${environment.baseUrl}/api/stock`, {
+    return this.http.get(`${this.baseURL}/api/stock`, {
       params: {
         'sector': '1'
       }
@@ -60,35 +189,38 @@ export class StockService {
     return data
   }
 
-  getPriceHistory(stock_id, lookBack=90){
-    return this.http.get(`${environment.baseUrl}/api/stock`, {
+  getPriceHistory(stock_ids: Array<any>, lookBack=90){
+    return this.http.get(`${this.baseURL}/api/stock`, {
       params: {
-        'stock_id': stock_id,
+        'stockIds': stock_ids.join(','),
         'history': lookBack.toString()
       }
     })
   }
 
+  getPriceHistoryFromDB(stock_ids: Array<any>, lookBack=90, fromSOD=0){
+    return this.http.get(`${this.baseURL}/api/stock`, {
+      params: {
+        'stockIds': stock_ids.join(','),
+        'history': lookBack.toString(),
+        'db': "1",
+        'fromSOD': fromSOD.toString()
+      }
+    })
+  }
+
   getAllStocksDetails(){
-    return this.http.get(`${environment.baseUrl}/api/stock`, {
+    return this.http.get(`${this.baseURL}/api/stock`, {
       params: {
         'all': '1'
       }
     })
   }
 
-  getNewsforStocks(stocks = []){
-    if(stocks.length == 0){
-      stocks = [{
-        'stock_id': -1
-      }]
-    }
-    let stockIds = []
-    stocks.forEach(stock => {
-      if(stockIds.indexOf(stock.stock_id) == -1)
-        stockIds.push(stock.stock_id)
-    });
-    return this.http.get(`${environment.baseUrl}/api/stock/details`, {
+  getNewsforStocks(stockIds = []){
+    if(stockIds.length == 0)
+      stockIds = [-1]
+    return this.http.get(`${this.baseURL}/api/stock/details`, {
       params: {
         'stockIds': stockIds.join(','),
         'type': 'news',
@@ -97,18 +229,10 @@ export class StockService {
     })
   }
 
-  getAGMforStocks(stocks = []){
-    if(stocks.length == 0){
-      stocks = [{
-        'stock_id': -1
-      }]
-    }
-    let stockIds = []
-    stocks.forEach(stock => {
-      if(stockIds.indexOf(stock.stock_id) == -1)
-        stockIds.push(stock.stock_id)
-    });
-    return this.http.get(`${environment.baseUrl}/api/stock/details`, {
+  getAGMforStocks(stockIds = []){
+    if(stockIds.length == 0)
+      stockIds = [-1]
+    return this.http.get(`${this.baseURL}/api/stock/details`, {
       params: {
         'stockIds': stockIds.join(','),
         'type': 'agm',
@@ -117,37 +241,23 @@ export class StockService {
     })
   }
   
-  getInsforStocks(stocks=[]){
-    if(stocks.length == 0){
-      stocks = [{
-        'stock_id': -1
-      }]
-    }
-    let stockIds = []
-    stocks.forEach(stock => {
-      if(stockIds.indexOf(stock.stock_id) == -1)
-        stockIds.push(stock.stock_id)
-    });
-    return this.http.get(`${environment.baseUrl}/api/stock/details`, {
+  getInsforStocks(stockIds=[]){
+    if(stockIds.length == 0)
+      stockIds = [-1]
+    return this.http.get(`${this.baseURL}/api/stock/details`, {
       params: {
         'stockIds': stockIds.join(','),
-        'type': 'insider'
+        'type': 'insider',
+        'window': '180'
       }
     })
   }
 
-  getBrokResforStocks(stocks=[], window=100){
-    if(stocks.length == 0){
-      stocks = [{
-        'stock_id': -1
-      }]
-    }
-    let stockIds = []
-    stocks.forEach(stock => {
-      if(stockIds.indexOf(stock.stock_id) == -1)
-        stockIds.push(stock.stock_id)
-    });
-    return this.http.get(`${environment.baseUrl}/api/stock/details`, {
+  getBrokResforStocks(stockIds=[], window=100){
+    if(stockIds.length == 0)
+      stockIds = [-1]
+
+    return this.http.get(`${this.baseURL}/api/stock/details`, {
       params: {
         'stockIds': stockIds.join(','),
         'type': 'broker-research',
@@ -156,17 +266,18 @@ export class StockService {
     })
   }
 
-  getBrokerRatings(){
+  getBrokerRatings(skipCache=0){
 
-    return this.http.get(`${environment.baseUrl}/api/analytics`, {
+    return this.http.get(`${this.baseURL}/api/analytics`, {
       params: {
         'stockIds': '-1',
         'type': 'brokerrating',
+        'skipCache': skipCache.toString()
       }
     })
   }
 
-  getTopMFHoldings(stocks=[], n=50){
+  getTopMFHoldings(stocks=[], n=60, skipCache=0){
     if(stocks.length == 0){
       stocks = [{
         'stock_id': -1
@@ -177,11 +288,12 @@ export class StockService {
       if(stockIds.indexOf(stock.stock_id) == -1)
         stockIds.push(stock.stock_id)
     });
-    return this.http.get(`${environment.baseUrl}/api/analytics`, {
+    return this.http.get(`${this.baseURL}/api/analytics`, {
       params: {
         'stockIds': stockIds.join(','),
         'type': 'topmfholdings',
-        'n': n.toString()
+        'n': n.toString(),
+        'skipCache': skipCache.toString()
       }
     })
   }
@@ -196,29 +308,23 @@ export class StockService {
       if(stockIds.indexOf(stock.stock_id) == -1)
         stockIds.push(stock.stock_id)
     });
-    return this.http.get(`${environment.baseUrl}/api/analytics`, {
+    return this.http.get(`${this.baseURL}/api/analytics`, {
       params: {
         'stockIds': stockIds.join(','),
         'type': detail,
         'window': window.toString(),
+        // 'skipCache': "1",
         'n': '1000'
       }
     })
   }
 
 
-  getDealsforStocks(stocks=[]){
-    if(stocks.length == 0){
-      stocks = [{
-        'stock_id': -1
-      }]
-    }
-    let stockIds = []
-    stocks.forEach(stock => {
-      if(stockIds.indexOf(stock.stock_id) == -1)
-        stockIds.push(stock.stock_id)
-    });
-    return this.http.get(`${environment.baseUrl}/api/stock/details`, {
+  getDealsforStocks(stockIds=[]){
+    if(stockIds.length == 0)
+      stockIds = [-1]
+    
+    return this.http.get(`${this.baseURL}/api/stock/details`, {
       params: {
         'stockIds': stockIds.join(','),
         'type': 'deals'
@@ -226,18 +332,11 @@ export class StockService {
     })
   }
 
-  getBMforStocks(stocks=[]){
-    if(stocks.length == 0){
-      stocks = [{
-        'stock_id': -1
-      }]
-    }
-    let stockIds = []
-    stocks.forEach(stock => {
-      if(stockIds.indexOf(stock.stock_id) == -1)
-        stockIds.push(stock.stock_id)
-    });
-    return this.http.get(`${environment.baseUrl}/api/stock/details`, {
+  getBMforStocks(stockIds=[]){
+    if(stockIds.length == 0)
+      stockIds = [-1]
+
+    return this.http.get(`${this.baseURL}/api/stock/details`, {
       params: {
         'stockIds': stockIds.join(','),
         'type': 'bm',
@@ -245,18 +344,11 @@ export class StockService {
       }
     })
   }
-  getCompetitionForStocks(stocks){
-    if(stocks.length == 0){
-      stocks = [{
-        'stock_id': -1
-      }]
-    }
-    let stockIds = []
-    stocks.forEach(stock => {
-      if(stockIds.indexOf(stock.stock_id) == -1)
-        stockIds.push(stock.stock_id)
-    });
-    return this.http.get(`${environment.baseUrl}/api/stock/details`, {
+  
+  getCompetitionForStocks(stockIds=[]){
+    if(stockIds.length == 0)
+      stockIds = [-1]
+    return this.http.get(`${this.baseURL}/api/stock/details`, {
       params: {
         'stockIds': stockIds.join(','),
         'type': 'competition',
@@ -264,38 +356,120 @@ export class StockService {
     })
   }
 
-  getQuaterlyForStocks(stocks=[], window=1000){
-    if(stocks.length == 0){
-      stocks = [{
-        'stock_id': -1
-      }]
-    }
-    let stockIds = []
-    stocks.forEach(stock => {
-      if(stockIds.indexOf(stock.stock_id) == -1)
-        stockIds.push(stock.stock_id)
-    });
-    return this.http.get(`${environment.baseUrl}/api/stock/details`, {
+  removeAlertById(alertId: number){
+    return this.http.delete(`${this.baseURL}/api/alerts`, {
+      params: {
+        'alertId': alertId.toString()
+      }
+    })
+  }
+
+  removeTodoById(todoId: number){
+    return this.http.delete(`${this.baseURL}/api/todo`, {
+      params: {
+        'todoId': todoId.toString()
+      }
+    })
+  }
+
+
+  addNewAlert(portfolio: number, alert: Alert){
+    return this.http.put(`${this.baseURL}/api/alerts`, {
+
+      'alertPortfolioId': portfolio.toString(),
+      'alertStockId': alert.alert_stock_id,
+      'alertType': alert.alert_type,
+      'alertValue': alert.alert_value,
+
+    })
+  }
+
+  updateTodo(todoId: number, status: string, reason: string){
+    return this.http.put(`${this.baseURL}/api/todo`, {
+
+      'todoId': todoId,
+      'status': status,
+      'reason': reason
+
+    })
+  }
+
+  addNewTodo(portfolio: number, todo: Todo){
+    return this.http.put(`${this.baseURL}/api/todo`, {
+
+      'portfolioId': portfolio.toString(),
+      'stockId': todo.stockId,
+      'action': todo.action,
+      'startPrice': todo.startPrice,
+      'reason': todo.reason
+
+    })
+  }
+
+
+  getAlertForPorfolio(portfolioId: number){
+    return this.http.get(`${this.baseURL}/api/alerts`, {
+      params: {
+        'portfolioId': portfolioId.toString(),
+      }
+    })
+  }
+
+  getTodoForPorfolio(portfolioId: number){
+    return this.http.get(`${this.baseURL}/api/todo`, {
+      params: {
+        'portfolioId': portfolioId.toString(),
+      }
+    })
+  }
+
+  getAlertHistoryForDate(){
+    return this.http.get(`${this.baseURL}/api/alert_history`)
+  }
+
+  getQuaterlyForStocks(stockIds=[], window=1000, frequency=3){
+    if(stockIds.length == 0)
+      stockIds = [-1]
+    return this.http.get(`${this.baseURL}/api/stock/details`, {
       params: {
         'stockIds': stockIds.join(','),
         'type': 'quarterly',
+        'window': window.toString(),
+        'frequency': frequency.toString()
+      }
+    })
+  }
+
+  getEPSForStocks(stockIds=[], window=1000, frequency=3){
+    if(stockIds.length == 0)
+      stockIds = [-1]
+    return this.http.get(`${this.baseURL}/api/stock/details`, {
+      params: {
+        'stockIds': stockIds.join(','),
+        'type': 'eps',
+        'window': window.toString(),
+        'frequency': frequency.toString()
+      }
+    })
+  }
+
+  getAllLiveNews(window=30){
+
+    return this.http.get(`${this.baseURL}/api/stock/details`, {
+      params: {
+        'stockIds': '',
+        'type': 'live-news',
         'window': window.toString()
       }
     })
   }
 
-  getDividendForStocks(stocks=[], window=30){
-    if(stocks.length == 0){
-      stocks = [{
-        'stock_id': -1
-      }]
-    }
-    let stockIds = []
-    stocks.forEach(stock => {
-      if(stockIds.indexOf(stock.stock_id) == -1)
-        stockIds.push(stock.stock_id)
-    });
-    return this.http.get(`${environment.baseUrl}/api/stock/details`, {
+  
+
+  getDividendForStocks(stockIds=[], window=30){
+    if(stockIds.length == 0)
+      stockIds = [-1]
+    return this.http.get(`${this.baseURL}/api/stock/details`, {
       params: {
         'stockIds': stockIds.join(','),
         'type': 'dividends',
@@ -305,7 +479,7 @@ export class StockService {
   }
 
   updateBrokresValidity(brokres_id: String){
-    return this.http.get(`${environment.baseUrl}/api/analytics`, {
+    return this.http.get(`${this.baseURL}/api/analytics`, {
       params: {
         'Ids': brokres_id.toString(),
         'action': 'update',
@@ -315,7 +489,7 @@ export class StockService {
   }
 
   checkBrokres(brokres_id: String){
-    return this.http.get(`${environment.baseUrl}/api/analytics`, {
+    return this.http.get(`${this.baseURL}/api/analytics`, {
       params: {
         'Ids': brokres_id.toString(),
         'action': 'update',
@@ -324,10 +498,10 @@ export class StockService {
     })
   }
 
-  updateStockDetails(stocks, updateList){
+  updateStockDetails(stockIds, updateList, lookBack=60){
     if(updateList.length == 0)
-      updateList = ['insider-transaction',
-      'income-statement',
+      updateList = [
+      'insider-transaction',
       'income-statement',
       'balance-sheet',
       'ratios',
@@ -342,19 +516,18 @@ export class StockService {
       'bulk-deals',
       'quarterly-results',
       'shareholding',
-      'news']
+      'news',
+      'eps'
+    ]
 
-    // console.table(stocks)
-    let stockIds = []
-    stocks.forEach(stock => {
-      if(stockIds.indexOf(stock.stock_id) == -1)
-        stockIds.push(stock.stock_id)
-    });
-    return this.http.get(`${environment.baseUrl}/api/stock/details`, {
+
+    return this.http.get(`${this.baseURL}/api/stock/details`, {
       params: {
         'stockIds': stockIds.join(','),
         'action': 'update',
-        'updateList': updateList.join(',')
+        'updateList': updateList.join(','),
+        'lookback': lookBack.toString(),
+        
       }
     })
   }

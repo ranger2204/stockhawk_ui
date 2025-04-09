@@ -8,7 +8,7 @@ export class Investment {
     inv_stock_price_per_share = 0;
     inv_current_value = 0;
     inv_remarks = "";
-    inv_date = undefined
+    inv_date:string | undefined = undefined
 
     constructor(){}
 }

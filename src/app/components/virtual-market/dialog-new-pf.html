@@ -3,6 +3,13 @@
         <mat-label>Portfolio Name</mat-label>
         <input matInput (keyup)='data.portfolioName=$event.target.value'>
     </mat-form-field>
+    <mat-form-field class="col-2">
+        <mat-label>Type</mat-label>
+        <mat-select (selectionChange)="data.portfolioType=$event.value">
+            <mat-option *ngFor="let t of types" value="{{t}}">{{t}}</mat-option>
+        </mat-select>
+    </mat-form-field>
+    
     <!-- <mat-form-field>
         <mat-label>Cost/Share</mat-label>
         <input matInput (keyup)='newInvestment.inv_stock_cost_per_share=$event.target.value'>

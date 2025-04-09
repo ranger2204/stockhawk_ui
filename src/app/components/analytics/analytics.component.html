@@ -1,7 +1,27 @@
+
+  
+
+
 <div class="container-fluid">
+
+  
+  
+
   <div class="row" *ngIf="refreshInProgress">
     <mat-progress-bar class="mb-3" mode="determinate" value="{{currentProgress}}"></mat-progress-bar>
   </div>
+
+  <!-- <div class="row">
+    <div class="col-8 mx-auto" style="max-height: 400px; overflow-y: auto;">
+      <mat-card *ngFor="let item of liveNews" class="m-1">
+        <mat-card-title>{{item['news_heading']}}</mat-card-title>
+        <mat-card-subtitle>{{item['news_datetime']}}</mat-card-subtitle>
+      </mat-card>
+    </div>
+  </div> -->
+  
+  
+
   <div class="row">
     <div class="col-4">
 
@@ -25,6 +45,8 @@
         <mat-select value=30 (selectionChange)="changePriceHistory($event.value)">
             <mat-option value="30">30</mat-option>
             <mat-option value="60">60</mat-option>
+            <mat-option value="90">90</mat-option>
+            <mat-option value="120">120</mat-option>
             <mat-option value="180">180</mat-option>
             <mat-option value="365">1Y</mat-option>
             <mat-option value="720">2Y</mat-option>
@@ -33,12 +55,30 @@
             <!-- <mat-option value="365">365</mat-option> -->
         </mat-select>
       </mat-form-field>
-      <button mat-icon-button color="accent" (click)="updateStockDetails(['price-history'])" [disabled]='refreshInProgress' title="Update DB">
+      <mat-form-field>
+        <mat-label>Price</mat-label>
+        <mat-select value=30 (selectionChange)="changePriceType($event.value)">
+            <mat-option value="stock_price_high">HIGH</mat-option>
+            <mat-option value="stock_price_low">LOW</mat-option>
+            <!-- <mat-option value="stock_price_open">180</mat-option> -->
+            <mat-option value="stock_price_close">CLOSE</mat-option>
+            <!-- <mat-option value="365">365</mat-option> -->
+        </mat-select>
+      </mat-form-field>
+
+      <button mat-icon-button color="accent" (click)="updateStockDetails([])" [disabled]='refreshInProgress' title="Update DB">
         <mat-icon [class.fa-rotate]='refreshInProgress'>autorenew</mat-icon>
       </button>
-      <mat-button-toggle-group [(value)]="equityMetric" (click)="changeMetric()" class="float-right">
+      <mat-button-toggle-group [(value)]="equityMetric" (click)="changeMetric()">
         <mat-button-toggle value="latest" enabled="equityMetric='latest'">Latest</mat-button-toggle>
         <mat-button-toggle value="mean" enabled="equityMetric='mean'">Mean</mat-button-toggle>
+        <mat-button-toggle value="median" enabled="equityMetric='median'">Median</mat-button-toggle>
+        <!-- <mat-button-toggle value="underline">Underline</mat-button-toggle> -->
+      </mat-button-toggle-group>
+
+      <mat-button-toggle-group [(value)]="equityParam" (click)="changeParam()">
+        <mat-button-toggle value="profit" enabled="equityParam='profit'">Profit</mat-button-toggle>
+        <mat-button-toggle value="eps" enabled="equityParam='eps'">EPS</mat-button-toggle>
         <!-- <mat-button-toggle value="underline">Underline</mat-button-toggle> -->
       </mat-button-toggle-group>
 
@@ -46,6 +86,11 @@
   </div>
   <div class="row" *ngIf="currentStock.stock_id">
     <div class="col-6">
+      <h3>
+        <a href="{{currentStock.stock_site_url}}">
+          {{currentStock.stock_name}}
+        </a>
+      </h3>
       <p>
         {{currentStock.stock_about}}
       </p>
@@ -62,10 +107,15 @@
       <div id="competition"></div>
     </div>
   </div>
-  <div class="row">
+  <div class="row" *ngIf="currentStock.stock_id">
     <div class="col-6">
       <div id="bank-quarter"></div>
       <div id="non-bank-quarter"></div>
+      <mat-button-toggle-group name="incPeriod">
+        <mat-button-toggle (click)="switchIncPeriod(3)">Quarterly</mat-button-toggle>
+        <mat-button-toggle (click)="switchIncPeriod(6)">Half Yearly</mat-button-toggle>
+        <mat-button-toggle (click)="switchIncPeriod(12)">Yearly</mat-button-toggle>
+      </mat-button-toggle-group>
     </div>
     <div class="col-6">
       <div id="price-bands"></div>
@@ -99,7 +149,9 @@
         <div class="col-6 card w-50" id="deals-distribution-buy" style="max-height: 400px;"></div>
         <!-- <div class="col-6 card w-50" id="deals-distribution-sell"></div> -->
         <div class="col-6 card w-50" id="br-distribution-buy" style="max-height: 400px;"></div>
-        
+      </div>
+      <div class="row">
+        <div class="col-12 card w-100" id="insider-distribution-buy" style="max-height: 400px;"></div>
       </div>
       <div class="row">
         <div class="col-8" id="top-mf-holdings"></div>
@@ -115,7 +167,7 @@
               <li class="list-group-item list-group-item-action m-0" 
               [class.active]="item.stock_id == currentStock.stock_id" 
               *ngFor="let item of topValue | appFilter: eventKW : allStocks : 'stock_id'" 
-              (click)="setStock(getStockFromId(item.stock_id).stock_name)">
+              (click)="setStock(getStockFromId(item.stock_id).stock_name)" >
                 
                 <div class="float-left">
                   {{getStockFromId(item.stock_id).stock_name}}
@@ -125,13 +177,16 @@
                 </div>
                 <div class="float-right">
                     <div class="badge badge-secondary p-1">
-                      P {{roundFloat(item.mean_profit)}}%
+                      E {{roundFloat(item.med_eps)}}
                     </div>
                     <div class="badge badge-secondary p-1">
-                      D {{roundFloat(item.div_count)}}
+                      P {{roundFloat(item.med_profit)}}%
                     </div>
                     <div class="badge badge-secondary p-1">
                       R {{item.br_count}}
+                    </div>
+                    <div class="badge badge-secondary p-1">
+                      D {{roundFloat(item.div_count)}}
                     </div>
                 </div>
                   
@@ -262,6 +317,44 @@
                 </div>
       
               </details>
+
+              <details class="card">
+                <summary class="card-header">
+                  Live News <span class="badge badge-primary">{{getLen(liveNewsDetails | appFilter: eventKW : [] : 'news_heading')}}</span>
+                  <span class="badge badge-info" title="{{getLatestCount(pagedFiltered['liveNewsDetails'], 'news_datetime', 1).lValue}}">
+                    {{getLatestCount(pagedFiltered['liveNewsDetails'], 'news_datetime', 1).newCount}}
+                  </span>
+                </summary>
+
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                  <table mat-table [dataSource]="pagedFiltered['liveNewsDetails']" class="mat-elevation-z8">
+            
+                    <ng-container matColumnDef="datetime">
+                      <th mat-header-cell *matHeaderCellDef> Date </th>
+                      <td mat-cell *matCellDef="let element"> {{element.news_datetime}} </td>
+                    </ng-container>
+            
+                    <ng-container matColumnDef="news">
+                      <th mat-header-cell *matHeaderCellDef> News </th>
+                      <td mat-cell *matCellDef="let element">
+                        <a href="{{element.news_url}}">{{element.news_heading}} </a>
+                        <span *ngIf="checkSubString(element.news_url, 'economictimes')" class="badge badge-danger">ET</span>
+                        <span *ngIf="checkSubString(element.news_url, 'moneycontrol')" class="badge badge-success">MC</span>
+                      </td>
+                    </ng-container>
+            
+                    <tr mat-header-row *matHeaderRowDef="displayedColumns['liveNews']"></tr>
+                    <tr mat-row *matRowDef="let row; columns: displayedColumns['liveNews'];"></tr>
+            
+                  </table>
+            
+                  <mat-paginator [length]="getLen(filterDataWithPipe(liveNewsDetails, eventKW, 'news_heading', 0))" [pageSize]="30"
+                    (page)="onChangePage($event, filterDataWithPipe(liveNewsDetails, eventKW, 'news_heading', 0), 'liveNewsDetails')">
+                  </mat-paginator>
+            
+                </div>
+              </details>
+            
       
               <details class="card">
                 <summary class="card-header">
@@ -404,7 +497,7 @@
       
                     <ng-container matColumnDef="margin">
                       <th mat-header-cell *matHeaderCellDef> Margin </th>
-                      <td mat-cell *matCellDef="let element" [class.bg-warning]="(getFloatFromLocale(element.brokres_target) - getStockFromId(element.brokres_stock_id).stock_current_price)*100/getStockFromId(element.brokres_stock_id).stock_current_price > 50">
+                      <td mat-cell *matCellDef="let element" [class.bg-warning]="(getFloatFromLocale(element.brokres_target) - getStockFromId(element.brokres_stock_id).stock_current_price)*100/getStockFromId(element.brokres_stock_id).stock_current_price > 30">
                         {{roundFloat((getFloatFromLocale(element.brokres_target) - getStockFromId(element.brokres_stock_id).stock_current_price)*100/getStockFromId(element.brokres_stock_id).stock_current_price)}}%
                       </td>
                     </ng-container>  
@@ -648,10 +741,14 @@
                 <span class="badge badge-primary">
                   {{getLen(topGainers | appFilter: eventKW : allStocks : 'stock_id')}}
                 </span>
+                <span class="badge badge-warning">
+                  {{countInTopValue(topGainers | appFilter: eventKW : allStocks : 'stock_id')}}
+                </span>
               </div>
               <div class="card-body p-0" style="overflow-y: auto;">
                 <ul class="list-group m-0">
-                  <li class="list-group-item list-group-item-action m-0" [class.active]="item.stock_id == currentStock.stock_id" *ngFor="let item of topGainers | appFilter: eventKW : allStocks : 'stock_id'" (click)="setStock(getStockFromId(item.stock_id).stock_name)">
+                  <li class="list-group-item list-group-item-action m-0" [class.active]="item.stock_id == currentStock.stock_id" 
+                  *ngFor="let item of topGainers | appFilter: eventKW : allStocks : 'stock_id'" (click)="setStock(getStockFromId(item.stock_id).stock_name)" [class.border-warning]="checkTopValue(item.stock_id)">
                     {{getStockFromId(item.stock_id).stock_name}}
                     <div class="float-right">
                       <div class="badge badge-info p-1">
@@ -676,10 +773,14 @@
                 <span class="badge badge-primary">
                   {{getLen(topLosers | appFilter: eventKW : allStocks : 'stock_id')}}
                 </span>
+                <span class="badge badge-warning">
+                  {{countInTopValue(topLosers | appFilter: eventKW : allStocks : 'stock_id')}}
+                </span>
               </div>
               <div class="card-body p-0" style="overflow-y: auto;">
                 <ul class="list-group m-0">
-                  <li class="list-group-item list-group-item-action m-0" [class.active]="item.stock_id == currentStock.stock_id" *ngFor="let item of topLosers | appFilter: eventKW : allStocks : 'stock_id'" (click)="setStock(getStockFromId(item.stock_id).stock_name)">
+                  <li class="list-group-item list-group-item-action m-0" [class.active]="item.stock_id == currentStock.stock_id" 
+                  *ngFor="let item of topLosers | appFilter: eventKW : allStocks : 'stock_id'" (click)="setStock(getStockFromId(item.stock_id).stock_name)" [class.border-warning]="checkTopValue(item.stock_id)">
                     {{getStockFromId(item.stock_id).stock_name}}
                     <div class="float-right">
                       <div class="badge badge-info p-1">
@@ -709,13 +810,14 @@
         
       
   </div>
-  <div class="row">
-      <div class="col-3">
+  <br>
+  <div class="row" style="height: 300px;">
+      <div class="col-2">
         <mat-form-field class="example-full-width">
           <mat-label>Sector</mat-label>
           <input matInput placeholder="Computer" (keyup)="sectorKW=$event.target.value">
         </mat-form-field>
-        <section style="max-height: 400px; overflow-y: auto;">
+        <section style="height: 250px; overflow-y: auto;">
           <!-- <mat-list>
             <mat-list-item *ngFor="let sector of allSectors">
               <mat-checkbox class="m-1">
@@ -732,30 +834,57 @@
           </mat-selection-list>
           
         </section>
-        <div class="btn btn-group">
-          <button mat-stroked-button class="btn btn-warning" (click)="getStocksBySector()">
+      </div>
+      <div class="col-2">
+        <mat-button-toggle-group class="m-1 rounded-0">
+          <mat-button-toggle (click)="getStocksBySector()">
             <mat-icon>refresh</mat-icon>
-          </button>
-          <button mat-stroked-button class="btn btn-warning" (click)="resetSectorSelection()">
+          </mat-button-toggle>
+          <mat-button-toggle (click)="resetSectorSelection()">
             <mat-icon>reset_tv</mat-icon>
-          </button>
-          <button mat-stroked-button class="btn btn-warning" (click)="allSectorSelection()">
+          </mat-button-toggle>
+          <mat-button-toggle (click)="allSectorSelection()">
             <mat-icon>done_all</mat-icon>
-          </button>
-          
-        </div>
-        <mat-button-toggle-group [(value)]="equityMetric" (click)="getStocksBySector()" class="float-right">
+          </mat-button-toggle>
+        </mat-button-toggle-group>
+        <br>
+        <mat-button-toggle-group [(value)]="equityMetric" (click)="getStocksBySector()" class="m-1 rounded-0">
           <mat-button-toggle value="latest" enabled="equityMetric='latest'">Latest</mat-button-toggle>
           <mat-button-toggle value="mean" enabled="equityMetric='mean'">Mean</mat-button-toggle>
+          <mat-button-toggle value="median" enabled="equityMetric='median'">Median</mat-button-toggle>
           <!-- <mat-button-toggle value="underline">Underline</mat-button-toggle> -->
         </mat-button-toggle-group>
         <br>
-        
+        <mat-button-toggle-group [(value)]="equityParam" (click)="getStocksBySector()" class="m-1 rounded-0">
+          <mat-button-toggle value="profit" enabled="equityParam='profit'">Profit</mat-button-toggle>
+          <mat-button-toggle value="eps" enabled="equityParam='eps'">EPS</mat-button-toggle>
+          <!-- <mat-button-toggle value="underline">Underline</mat-button-toggle> -->
+        </mat-button-toggle-group>
         
       </div>
-    
+        
+      <div class="col-4">
+        <div class="btn-block" style="height: 250px; overflow-y: auto;">
+          <button mat-button class="btn btn-sm border" (click)="addToLater(i, compList, compExclusionList)" *ngFor="let stock of compList; let i=index;">
+            {{stock.stock_name}}
+            <mat-icon class="mx-auto">close</mat-icon>
+          </button>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="btn-block" style="height: 250px; overflow-y: auto;">
+          <button mat-button class="btn btn-sm border" (click)="addToLater(i, compExclusionList, compList)" *ngFor="let stock of compExclusionList; let i=index;">
+            {{stock.stock_name}}
+            <mat-icon class="mx-auto">close</mat-icon>
+          </button>
+        </div>
+      </div>
+    </div>
       
-      <div class="col-9">
+    <hr>
+ 
+    <div class="row">
+      <div class="col-12">
         <div id="sectors" style="min-height: 500px;"></div>
         <hr>
         <div class="btn-block">

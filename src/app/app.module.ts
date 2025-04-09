@@ -38,11 +38,14 @@ import { HoldingsComponent } from './components/holdings/holdings.component';
 import { DialogNewPF } from './components/virtual-market/virtual-market.component';
 import { PortfolioService } from './services/portfolio.service';
 import { StockService } from './services/stock.service';
-
+import {MatSnackBarModule} from '@angular/material/snack-bar';
+import { ToastrModule } from 'ngx-toastr'
 
 import { Investment } from './models/Investment'
 
-import { FilterPipe } from './pipes/filter.pipe'; 
+import { FilterPipe } from './pipes/filter.pipe';
+import { FilterObjectByKeyPipe, FilterObjectByExpiryPipe, FilterObjectByKeyAgainstListPipe } from './components/options/pipes/filterPipe';
+import { OptionsComponent } from './components/options/options.component'; 
 
 
 @NgModule({
@@ -52,7 +55,11 @@ import { FilterPipe } from './pipes/filter.pipe';
     VirtualMarketComponent,
     HoldingsComponent,
     DialogNewPF,
-    FilterPipe
+    FilterPipe,
+    OptionsComponent,
+    FilterObjectByKeyPipe,
+    FilterObjectByExpiryPipe,
+    FilterObjectByKeyAgainstListPipe
   ],
   imports: [
     BrowserModule,
@@ -85,7 +92,11 @@ import { FilterPipe } from './pipes/filter.pipe';
     MatTooltipModule,
     MatDatepickerModule,
     MatNativeDateModule,
-    MatSlideToggleModule
+    MatSlideToggleModule,
+    MatSnackBarModule,
+    ToastrModule.forRoot({
+      maxOpened: 8
+    })
   ],
   providers: [
     PortfolioService,
