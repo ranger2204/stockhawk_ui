@@ -93,14 +93,14 @@
     <tr *ngIf="animationState=='open'">
       <mat-tab-group>
         <mat-tab label="News">
-          <div [@slideInOut]="animationState" style="max-height:90vh; overflow-y: auto; width: 500px;" >
+          <div [@slideInOut]="animationState" style="max-height:90vh; overflow-y: auto; width: 400px;" >
             <mat-card class="m-1 rounded-0"  *ngFor="let item of liveNews" style="font-size: small;">
               <mat-card-title>
-                <h2>
+                <h2 style="font-size: small;">
                   <a href="{{item.news_url}}">{{item.news_heading}}</a>
                 </h2>
               </mat-card-title>
-              <mat-card-subtitle>
+              <mat-card-subtitle style="font-size: smaller;">
                 {{item.news_datetime}}
                 <span *ngIf="checkSubString(item.news_url, 'economictimes')" class="badge badge-danger">ET</span>
                 <span *ngIf="checkSubString(item.news_url, 'moneycontrol')" class="badge badge-success">MC</span>
@@ -109,7 +109,7 @@
           </div>
         </mat-tab>
         <mat-tab label="Alerts">
-          <div [@slideInOut]="animationState" style="max-height:600px; overflow-y: auto; width: 500px;" >
+          <div [@slideInOut]="animationState" style="max-height:600px; overflow-y: auto; width: 400px;" >
             <mat-card class="m-1 rounded-0"  *ngFor="let item of liveAlerts">
               <mat-card-title>
                 <h2>
