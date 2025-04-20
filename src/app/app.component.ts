@@ -176,7 +176,7 @@ export class AppComponent implements OnInit{
         this.liveAlerts = back
       })
       
-      if (((date.getHours() <= 15 && date.getMinutes() <= 35 )&& (date.getHours() >= 9 && date.getMinutes() >= 10)) || forceUpdate === true)
+      if (this.isMarketHours() || forceUpdate === true)
         this.stockService.getAllLiveIndex().subscribe(data => {
           if(data['data']['live-index'].length > 0)
             console.log("updating indices...")
@@ -191,6 +191,23 @@ export class AppComponent implements OnInit{
     this.liveDataInterval = setInterval(() => {
       updateLiveData(false)
     }, 1000*15)
+  }
+
+  isMarketHours() {
+    const now = new Date();
+
+    if(now.getDay() == 6 || now.getDay() == 7)
+      return false
+    
+    // Define start time (9:15 AM)
+    const startTime = new Date();
+    startTime.setHours(9, 13, 0, 0);
+    
+    // Define end time (3:30 PM)
+    const endTime = new Date();
+    endTime.setHours(15, 32, 0, 0);
+    
+    return now >= startTime && now <= endTime;
   }
 
   toFloat(numstr: string) {
