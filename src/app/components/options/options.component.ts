@@ -241,10 +241,17 @@ export class OptionsComponent implements OnInit {
         this.realPLD += item.total_sell_price - item.total_cost_price
     })
 
-    let diff = Math.abs(this.unrealPL - prevunRealPL)
+    let diff = this.unrealPL - prevunRealPL
 
-    if(prevunRealPL != 0 && diff >= 3500 && enableAlert) {
-    
+    if(prevunRealPL != 0 && Math.abs(diff) >= 3000 && enableAlert) {
+      let sym = diff < 0 ? "-₹": "₹"
+      this.toastr.info(
+        "Value Change : "+sym+Math.abs(diff), 
+        "Porfolio Alert ("+(new Date()).toTimeString()+')', 
+        {
+          disableTimeOut: true
+        }
+      )
       console.log("BEEEEEEEEEEEEEEEEP! " + diff)
       // /home/ranger/Projects/eyestock/EyeStock_UI/src/app/components/options/options.component.ts
       this.playBeep()
@@ -961,6 +968,7 @@ export class OptionsComponent implements OnInit {
         if(Object.keys(stkData).indexOf(stockId) >= 0) {
           let stock = this.getStockFromId(stockId)
           stock.stock_current_price_live = stkData[stockId]['price_history'].slice(-1)[0].stock_price_close
+          // console.log("updating stock : "+stockId)
         }
       })
       // stockIds.forEach(stockId => {
@@ -968,29 +976,43 @@ export class OptionsComponent implements OnInit {
       // })
 
       let optData = optResp['data']
-      // console.table(data['data'])
+      // console.log(optData)
       optIds.forEach(optId => {
-        if(optId === this.currentActiveOption.opt_id) {
-          this.updateCurrentLive(optId, optData[optId], stkData[this.currentActiveOption.opt_stock_id])
+        let option = this.getOptionFromId(optId)
+        // console.log("checking : "+optId+" : "+typeof(optId))
+        try {
+          if(optData[optId].length > 0) {
+            option.opt_last_price_live = optData[option.opt_id].slice(-1)[0].opt_ph_last
+            if(optId === this.currentActiveOption.opt_id) {
+              this.updateCurrentLive(optId, optData[optId], stkData[this.currentActiveOption.opt_stock_id])
+            }
+            // console.log("updating option : "+option.opt_id)
+          }
+        }
+        catch (err){
+          console.error(err)
         }
         // if (optData[optId].slice(-1).length > 0) {
         //   this.updateActiveOptions(optId, optData[optId].slice(-1)[0].opt_ph_last)
         // }
       })
 
+      this.updateOptionAlert()
+      this.updateStats(enableAlert)
+
 
       
-      // if (!this.isMarketHours()) {
-      //   clearInterval(this.liveTO)
-      //   console.log("clear getLive interval")
-      //   this.liveTO = undefined
-      //   return
-      // }
+      if (!this.isMarketHours()) {
+        clearInterval(this.liveTO)
+        console.log("clear getLive interval")
+        this.liveTO = undefined
+        return
+      }
   
     }
     getLive(true)
-    // if(this.isMarketHours())
-    this.liveTO = setInterval(getLive, 10*1000)
+    if(this.isMarketHours())
+      this.liveTO = setInterval(getLive, 12*1000)
   }
 
   getOptUniqueId(option) {
@@ -1064,7 +1086,7 @@ export class OptionsComponent implements OnInit {
     endTime.setHours(15, 32, 0, 0);
     
     return now >= startTime && now <= endTime;
-}
+  }
 
   updateOptionAlert() {
     const diffPerc = 0.005

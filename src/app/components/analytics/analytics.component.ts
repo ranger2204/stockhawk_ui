@@ -290,7 +290,7 @@ export class AnalyticsComponent implements OnInit {
           }
         )
       })
-    }, 500)
+    }, 1000)
       
   }
 
@@ -1153,6 +1153,7 @@ export class AnalyticsComponent implements OnInit {
     this.dealDetails = []
 
     this.stockService.getDealsforStocks().subscribe(data => {
+      // console.log("deals....")
       // console.table(data['deals'])
       this.dealDetails = data['deals']
       this.dealDetails = this.dealDetails.filter(
@@ -1165,13 +1166,13 @@ export class AnalyticsComponent implements OnInit {
       
       // console.log(dealCounts)
       let dataSeries = []
-      Object.keys(dealCounts['Purchase']).forEach(it => {
+      Object.keys(dealCounts['purchase']).forEach(it => {
         let stockObj = this.getStockFromId(it)
         if(stockObj.stock_current_price <= this.stockMaxPrice)
           dataSeries.push(
             {
               'name': `${stockObj.stock_name}`,
-              'data': [dealCounts['Purchase'][it]],
+              'data': [dealCounts['purchase'][it]],
               'type': 'column',
               // 'hidden': true
             }
@@ -1440,6 +1441,7 @@ export class AnalyticsComponent implements OnInit {
       this.getTopMFHoldings(skipCache);
       this.getNews();
       this.getTopValue();
+      this.getTopChangers();
 
     })
   }

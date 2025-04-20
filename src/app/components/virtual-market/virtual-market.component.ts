@@ -324,7 +324,7 @@ export class VirtualMarketComponent implements OnInit {
           return -1
         return  0
       })
-      console.table(this.todoData)
+      // console.table(this.todoData)
     })
   }
 
@@ -593,7 +593,7 @@ export class VirtualMarketComponent implements OnInit {
         // console.log(data)
         this.portfolioDetails = data['portfolio']
         this.stockDetails = data['stocks']
-        console.table(this.stockDetails)
+        // console.table(this.stockDetails)
         this.portfolioStats = data['stats']
         console.log(this.stockDetails)
 
@@ -623,8 +623,8 @@ export class VirtualMarketComponent implements OnInit {
         
        
         // console.table(this.portfolioInvestments)
-        console.table(this.investmentDetails)
-        console.table(this.sellDetails)
+        // console.table(this.investmentDetails)
+        // console.table(this.sellDetails)
         
         this.getDeals();
         this.getDividends();
@@ -1121,7 +1121,7 @@ export class VirtualMarketComponent implements OnInit {
     }
     let invDCopy = JSON.parse(JSON.stringify(investmentDetails))
     invDCopy.sort((a, b) => a.inv_datetime < b.inv_datetime? -1:a.inv_datetime === b.inv_datetime?0:1)
-    console.table(invDCopy)
+    // console.table(invDCopy)
     for(let i=0; i<invDCopy.length; i++){
       let inv = JSON.parse(JSON.stringify(invDCopy[i]))
       if(!sellFlag)
@@ -1132,12 +1132,12 @@ export class VirtualMarketComponent implements OnInit {
       }
     }
     // remove 0 qty investments
-    console.table(investments)
+    // console.table(investments)
     let i = 0;
     let maxLen = investments.length;
     while(i < maxLen){
       let inv = investments[i]
-      console.log(this.getStockDetails(inv.inv_stock_id))
+      // console.log(this.getStockDetails(inv.inv_stock_id))s
       if( inv.inv_stock_qty == 0){
         // console.log("Removing 0 QTY")
         // console.log(this.getStockDetails(inv.inv_stock_id))
@@ -1365,7 +1365,7 @@ export class VirtualMarketComponent implements OnInit {
     let max_len = -1
   
     let stockIds = Object.keys(this.stockDetails)
-    console.table(this.stockDetails)
+    // console.table(this.stockDetails)
     
     let stockData = await this.stockService.getPriceHistory(stockIds, 1).toPromise()
       
@@ -1374,7 +1374,7 @@ export class VirtualMarketComponent implements OnInit {
       console.log(sid, this.getStockFromId(sid).stock_name)
       this.stockDetails[sid]['stock_live_updatetime'] = null
       let data = stockData[sid]
-      console.table(data['price_history'])
+      // console.table(data['price_history'])
     
       liveStockPH[sid] = data['price_history']
       try {  
@@ -1481,7 +1481,7 @@ export class VirtualMarketComponent implements OnInit {
 
     });
 
-    console.table(currentLivePFStockValue[currentLivePFStockValue.length-1]['data'])
+    // console.table(currentLivePFStockValue[currentLivePFStockValue.length-1]['data'])
 
     let color = this.getRandomColors(inColors)
     inColors.push(color)
@@ -1625,7 +1625,7 @@ export class VirtualMarketComponent implements OnInit {
         'dashStyle': 'Dot'
       })
 
-      console.table(totalLive)
+      // console.table(totalLive)
 
       let populateIndices = async (lookBack, priceType, inColors)  => {
         console.log("populating indices....")
@@ -1633,7 +1633,7 @@ export class VirtualMarketComponent implements OnInit {
           let ind = this.indices[i]
           let data = await this.stockService.getIndexPriceHistory(ind, lookBack).toPromise()
           let pth = data['point_history']
-          console.table(pth)
+          // console.table(pth)
           let dataPoint = []
           pth.forEach(pt => {
             dataPoint.push(
