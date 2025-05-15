@@ -44,6 +44,7 @@ import { ToastrModule } from 'ngx-toastr'
 import { Investment } from './models/Investment'
 
 import { FilterPipe } from './pipes/filter.pipe';
+import { OptionSortPipe } from './components/options/pipes/sortPipe';
 import { FilterObjectByKeyPipe, FilterObjectByExpiryPipe, FilterObjectByKeyAgainstListPipe } from './components/options/pipes/filterPipe';
 import { OptionsComponent } from './components/options/options.component'; 
 
@@ -59,7 +60,8 @@ import { OptionsComponent } from './components/options/options.component';
     OptionsComponent,
     FilterObjectByKeyPipe,
     FilterObjectByExpiryPipe,
-    FilterObjectByKeyAgainstListPipe
+    FilterObjectByKeyAgainstListPipe,
+    OptionSortPipe
   ],
   imports: [
     BrowserModule,
