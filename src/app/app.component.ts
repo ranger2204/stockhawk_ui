@@ -196,7 +196,7 @@ export class AppComponent implements OnInit{
   isMarketHours() {
     const now = new Date();
 
-    if(now.getDay() == 6 || now.getDay() == 7)
+    if(now.getDay() == 6 || now.getDay() == 0)
       return false
     
     // Define start time (9:15 AM)
