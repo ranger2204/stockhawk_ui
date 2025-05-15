@@ -84,15 +84,20 @@
         <div class="col-5">
             <table class="table table-sm table-borderless m-0 float-left p-0 font-weight-light" style="font-size: small;">
                 <tr style="font-size:small;">
-                    <td>Total Investment</td>
-                    <td>Unrealized P/L</td>
-                    <td>Unrealized P</td>
-                    <td>Realized P/L</td>
-                    <td>Realized P/L (Day)</td>
+                    <td>Total Inv.</td>
+                    <td>Cur Value</td>
+                    <td>Unreal. P/L</td>
+                    <td>Unreal. P</td>
+                    <td>Real. P/L</td>
+                    <td>Real. P/L (Day)</td>
+                    <td>Real. P/L (Session)</td>
                 </tr>
                 <tr style="font-size:medium;">
                     <td>
                         ₹ {{roundFloat(totalInvestment)}}
+                    </td>
+                    <td>
+                        ₹ {{roundFloat(currentValue)}}
                     </td>
                     <td>
                         ₹ {{roundFloat(unrealPL)}}
@@ -108,6 +113,7 @@
                     </td>
                     <td>₹ {{roundFloat(realPL)}}</td>
                     <td>₹ {{roundFloat(realPLD)}}</td>
+                    <td>₹ {{roundFloat(realPLS)}}</td>
 
                 </tr>
             </table>
@@ -128,16 +134,38 @@
                                 <mat-icon>refresh</mat-icon>
                             </button> -->
                             <div style="font-size:small;" class="d-inline">
-                                <mat-form-field class="m-0 p-0 ml-3" style="width: 100px">
+                                <mat-form-field class="m-0 p-0 ml-3">
                                     <mat-label>Search Ticker</mat-label>
-                                    <input matInput type="text" (keyup)="aoFilterValue=$event.target.value">
+                                    <input matInput type="text" (keyup)="aoFilterValue=$event.target.value" [value]="aoFilterValue">
+                
+                                    <button *ngIf="aoFilterValue" matSuffix mat-icon-button aria-label="Clear" (click)="aoFilterValue=''">
+                                        <mat-icon>close</mat-icon>
+                                    </button>
+                                    
                                 </mat-form-field>
-                                <mat-checkbox class="m-0 ml-1" (change)="updateExpiredFlag($event.checked)">View All</mat-checkbox>
-                                <mat-checkbox class="m-0 ml-1" (change)="updateOptionType($event.checked, 'CE')">CE</mat-checkbox>
+                                <mat-checkbox class="m-0 ml-1" (change)="updateExpiredFlag($event.checked)">All</mat-checkbox>
+                                <mat-checkbox class="m-0 ml-1" (change)="updateOptionType($event.checked, 'CE', 'ao')">CE</mat-checkbox>
     
-                                <mat-checkbox class="m-0 ml-1" (change)="updateOptionType($event.checked, 'PE')">PE</mat-checkbox>
+                                <mat-checkbox class="m-0 ml-1" (change)="updateOptionType($event.checked, 'PE', 'ao')">PE</mat-checkbox>
     
                             </div>
+                            <br>
+                            <div class="row">
+                                <div style="font-size:small;" class="btn-group">
+                                    <button type="button" class="btn btn-sm" (click)="aoSortAttrib='change'" [class.btn-primary]="aoSortAttrib=='change'">change</button>
+                                    <button type="button" class="btn btn-sm" (click)="aoSortAttrib='date'" [class.btn-primary]="aoSortAttrib=='date'">date</button>
+                                    <button type="button" class="btn btn-sm" (click)="aoSortAttrib='symbol'" [class.btn-primary]="aoSortAttrib=='symbol'" >symbol</button>
+                                    <button type="button" class="btn btn-sm" (click)="aoSortAttrib='price'" [class.btn-primary]="aoSortAttrib=='price'">price</button>
+                                </div>
+
+                                <div style="font-size:small;" class="btn-group ml-1">
+                                    <button type="button" class="btn btn-sm" (click)="aoSortOrd=!aoSortOrd">
+                                        <mat-icon *ngIf="aoSortOrd">arrow_upward</mat-icon>
+                                        <mat-icon *ngIf="!aoSortOrd">arrow_downward</mat-icon>
+                                    </button>
+                                </div>
+                            </div>
+                            
                             
                             <!-- <input  matInput type="text" class="form-control" placeholder="ticker" aria-label="ao_search" > -->
                          
@@ -145,59 +173,65 @@
                         <div style="height: 40vh; overflow-y: auto;">
                             <table class="table table-sm" style="font-size: small;">
                                 
-                                    <tr class="ao_row" *ngFor="let option of activeOptions | filterObjectByKey:'opt_symbol':aoFilterValue | filterObjectByExpiry: expiredFlag | filterObjectByKeyAgainstList: 'opt_type':optTypes"  (click)="getHistoricData(option); currentActiveOption=option;  setNewInvestment(); getLive(option); invToSell=undefined;" [className]="currentActiveOption && currentActiveOption.opt_id==option.opt_id?'border border-dark border-1':'border border-1'">
-                                        <td>
-                                            <mat-icon style="transform: scale(0.3);" [class.d-none]="optionAlert[option.opt_id]==='NEUTRAL'" [class.text-success]="optionAlert[option.opt_id]==='GOOD'" [class.text-danger]="optionAlert[option.opt_id]==='BAD'" [class.text-warning]="optionAlert[option.opt_id]==='WATCH'">circle</mat-icon>
-                                        </td>
-                                        <td class="text-left">
-                                            <a href="{{getStockFromId(option['opt_stock_id'])['stock_site_url']}}" [className]="isActiveInvest(option)?'font-weight-bolder':''">
-                                            {{option['opt_symbol']}}
-                                            </a>
-                                            <span  style="width: 40px;" [className]="getStockFromId(option['opt_stock_id'])['stock_current_price_live'] > getStockFromId(option['opt_stock_id'])['stock_current_price'] ? 'badge  p-1 badge-success': 'badge  p-1 badge-danger'">
-                                                {{getStockFromId(option['opt_stock_id'])['stock_current_price_live']}}
+                                <tr class="ao_row" *ngFor="let option of activeOptions | filterObjectByKey:'opt_symbol':aoFilterValue | filterObjectByExpiry: expiredFlag | filterObjectByKeyAgainstList: 'opt_type':optTypes | sort: aoSortAttrib: aoSortOrd"  (click)="getHistoricData(option); currentActiveOption=option;  setNewInvestment(); getLive(option); invToSell=undefined;" [className]="currentActiveOption && currentActiveOption.opt_id==option.opt_id?'border border-dark border-1':'border border-1'">
+                                    <!-- <td>
+                                        <mat-icon style="transform: scale(0.3);" [class.d-none]="optionAlert[option.opt_id]==='NEUTRAL'" [class.text-success]="optionAlert[option.opt_id]==='GOOD'" [class.text-danger]="optionAlert[option.opt_id]==='BAD'" [class.text-warning]="optionAlert[option.opt_id]==='WATCH'">circle</mat-icon>
+                                    </td> -->
+                                    <td class="text-left">
+                                        <a href="{{getStockFromId(option['opt_stock_id'])['stock_site_url']}}" [className]="isActiveInvest(option)?'font-weight-bolder':''">
+                                        {{option['opt_symbol']}}
+                                        </a>
+                                        <span  style="width: 40px;" [className]="getStockFromId(option['opt_stock_id'])['stock_current_price_live'] > getStockFromId(option['opt_stock_id'])['stock_current_price'] ? 'badge  p-1 badge-success': 'badge  p-1 badge-danger'">
+                                            {{getStockFromId(option['opt_stock_id'])['stock_current_price_live']}}
+                                        </span>
+                                        <div style="font-size: smaller;">
+                                            <span class="text-warning">
+                                                {{option['opt_mkt_lot']}}
                                             </span>
-                                            <div style="font-size: smaller;">
-                                                <span class="text-warning">
-                                                    {{option['opt_mkt_lot']}}
-                                                </span>
-                                                <span [class.text-danger]="option['opt_type'] === 'PE'" [class.text-success]="option['opt_type'] === 'CE'">
-                                                    {{option['opt_type']}}
-                                                </span>
-                                                {{option['opt_expiry_date']}} 
-                                                {{option['opt_strike_price']}}
-                                              
-                                            </div>
+                                            <span [class.text-danger]="option['opt_type'] === 'PE'" [class.text-success]="option['opt_type'] === 'CE'">
+                                                {{option['opt_type']}}
+                                            </span>
+                                            {{option['opt_expiry_date']}} 
+                                            {{option['opt_strike_price']}}
                                             
-                                        </td>
-                                        <td>
+                                        </div>
+                                        
+                                    </td>
+                                    <td>
 
-                                            <span class="badge badge-warning  p-1 rounded-0" style="width: 40px;" *ngIf="option['opt_type'] === 'PE'">
-                                                {{roundFloat(option['opt_strike_price'] - getStockFromId(option['opt_stock_id'])['stock_current_price_live'])}}
-                                            </span>
-                                            <span class="badge badge-warning  p-1 rounded-0" style="width: 40px;" *ngIf="option['opt_type'] === 'CE'">
-                                                {{roundFloat(getStockFromId(option['opt_stock_id'])['stock_current_price_live'] - option['opt_strike_price'])}}
-                                            </span>
-                                            
-                                            <span style="width: 40px;" [className]="option['opt_last_price_live'] > option['opt_last_price'] ? 'badge  p-1 badge-success rounded-0': 'badge  p-1 badge-danger rounded-0'" title="{{option['opt_last_price_live'] - option['opt_last_price']}}">
-                                                {{option['opt_last_price_live']}}
-                                            </span>
-                                            
-                                        </td>
+                                        <span class="badge badge-warning  p-1 rounded-0" style="width: 40px;" *ngIf="option['opt_type'] === 'PE'">
+                                            {{roundFloat(option['opt_strike_price'] - getStockFromId(option['opt_stock_id'])['stock_current_price_live'])}}
+                                        </span>
+                                        <span class="badge badge-warning  p-1 rounded-0" style="width: 40px;" *ngIf="option['opt_type'] === 'CE'">
+                                            {{roundFloat(getStockFromId(option['opt_stock_id'])['stock_current_price_live'] - option['opt_strike_price'])}}
+                                        </span>
                                         
-                                        <td>
-                                            <span class="float-right">
-                                                ₹ {{roundFloat(option['opt_mkt_lot']*option['opt_last_price_live'])}}
-                                            </span>
-                                     
-                                        </td>
-                                        <td>
-                                            <button mat-icon-button (click)="deleteOption(option)" title="Remove Option">
-                                                <mat-icon style="transform: scale(0.7);" class="text-danger">cancel</mat-icon>
-                                            </button>
-                                            <!-- <mat-icon style="transform: scale(0.8);"  color="red" style="cursor: pointer;">close</mat-icon> -->
-                                        </td>
+                                        <span style="width: 40px;" [className]="option['opt_last_price_live'] > option['opt_last_price'] ? 'badge  p-1 badge-success rounded-0': 'badge  p-1 badge-danger rounded-0'" title="{{option['opt_last_price_live'] - option['opt_last_price']}}">
+                                            {{option['opt_last_price_live']}}
+                                        </span>
+                                        <span style="width: 40px;" class="badge badge-light">
+                                            <!-- {{roundFloat(getAbs(option['opt_last_price_live']/(getStockFromId(option['opt_stock_id'])['stock_current_price_live'] - option['opt_strike_price'])))}} -->
+                                            <span *ngIf="option['opt_last_price_live'] - option['opt_last_price'] > 0">+</span>
+                                            <span *ngIf="option['opt_last_price_live'] - option['opt_last_price'] < 0">-</span>
+                                            {{roundFloat(getAbs(option['opt_last_price_live'] - option['opt_last_price']))}}
+                                        </span>
                                         
-                                    </tr>
+                                    </td>
+                                    
+                                    <td>
+                                        <span class="float-right">
+                                            ₹ {{roundFloat(option['opt_mkt_lot']*option['opt_last_price_live'])}}
+                                        </span>
+                                    
+                                    </td>
+                                    <td>
+                                        <button mat-icon-button (click)="deleteOption(option)" title="Remove Option">
+                                            <mat-icon style="transform: scale(0.7);" class="text-danger">cancel</mat-icon>
+                                        </button>
+                                        <!-- <mat-icon style="transform: scale(0.8);"  color="red" style="cursor: pointer;">close</mat-icon> -->
+                                    </td>
+                                    
+                                </tr>
                             </table>
                         </div>
                     </div>
@@ -209,6 +243,7 @@
                     <div class="card shadow  mt-2" *ngIf="currentActiveOption">
                         <div class="card-header">
                             Transact
+                            
                         </div>
                         <form *ngIf="invToSell">
 
@@ -340,7 +375,14 @@
                                 <mat-form-field class="m-0 p-0 ml-3">
                                     <mat-label>Search Ticker</mat-label>
                                     <input matInput type="text" #obFilterInput>
+                                    <button *ngIf="obFilterInput.value !== ''" matSuffix mat-icon-button aria-label="Clear" (click)="obFilterInput.value=''">
+                                        <mat-icon>close</mat-icon>
+                                      </button>
                                 </mat-form-field>
+                                <mat-checkbox class="m-0 ml-1" (change)="updateOptionType($event.checked, 'CE', 'ob')">CE</mat-checkbox>
+    
+                                <mat-checkbox class="m-0 ml-1" (change)="updateOptionType($event.checked, 'PE', 'ob')">PE</mat-checkbox>
+    
                                 <!-- <mat-checkbox class="m-0 ml-1" (change)="updateOptionType($event.checked, 'CE')">CE</mat-checkbox>
     
                                 <mat-checkbox class="m-0 ml-1" (change)="updateOptionType($event.checked, 'PE')">PE</mat-checkbox> -->
@@ -351,7 +393,7 @@
                         <div style="height: 40vh; overflow-y: auto;">
                         <table class="table table-sm" style="font-size: small;">
                             
-                                <tr *ngFor="let option of this.optionBets | filterObjectByKey:'opt_symbol':obFilterInput.value">
+                                <tr *ngFor="let option of this.optionBets | filterObjectByKey:'opt_symbol':obFilterInput.value | filterObjectByKeyAgainstList: 'opt_type':optTypesBet">
                                     
                                     <td class="text-left" [className]="isActiveOption(option)?'bg-warning':''">
                                         <a href="{{getStockFromId(option['opt_stock_id'])['stock_site_url']}}">
@@ -383,6 +425,9 @@
                                         
                                         <span style="width: 40px;" [className]="option['opt_last_price_live'] > option['opt_last_price'] ? 'badge  p-1 badge-success rounded-0': 'badge  p-1 badge-danger rounded-0'" title="{{option['opt_last_price_live'] - option['opt_last_price']}}">
                                             {{option['opt_last_price_live']}}
+                                        </span>
+                                        <span style="width: 40px;" class="badge badge-light">
+                                            {{roundFloat(getAbs(option['opt_last_price_live']/(getStockFromId(option['opt_stock_id'])['stock_current_price_live'] - option['opt_strike_price'])))}}
                                         </span>
                                         
                                         
@@ -536,16 +581,16 @@
                             </ng-container>
                             <ng-container matColumnDef="optionName">
                                 <th mat-header-cell *matHeaderCellDef>Option</th>
-                                <td mat-cell *matCellDef="let inv">
+                                <td mat-cell *matCellDef="let inv" [class.font-weight-bolder]="checkITM(inv['opt_id'])">
                                 
                                     <a href="{{getStockFromId(getOptionFromId(inv['opt_id'])['opt_stock_id'])['stock_site_url']}}">
                                         
                                         {{getOptionFromId(inv['opt_id'])['opt_symbol']}}
                                     </a>    
-                                <span style="width: 40px;" [className]="getStockFromId(getOptionFromId(inv['opt_id'])['opt_stock_id'])['stock_current_price_live'] > getStockFromId(getOptionFromId(inv['opt_id'])['opt_stock_id'])['stock_current_price'] ? 'badge  p-1 badge-success': 'badge  p-1 badge-danger'" title="{{getStockFromId(getOptionFromId(inv['opt_id'])['opt_stock_id'])['stock_current_price_live'] - getStockFromId(getOptionFromId(inv['opt_id'])['opt_stock_id'])['stock_current_price']}}">
+                                <span style="width: 40px;" [className]="getStockFromId(getOptionFromId(inv['opt_id'])['opt_stock_id'])['stock_current_price_live'] > getStockFromId(getOptionFromId(inv['opt_id'])['opt_stock_id'])['stock_current_price'] ? 'badge  p-1 badge-success': 'badge  p-1 badge-danger'" title="{{roundFloat(getStockFromId(getOptionFromId(inv['opt_id'])['opt_stock_id'])['stock_current_price_live'] - getStockFromId(getOptionFromId(inv['opt_id'])['opt_stock_id'])['stock_current_price'])}}">
                                     {{getStockFromId(getOptionFromId(inv['opt_id'])['opt_stock_id'])['stock_current_price_live']}}
                                 </span>
-                                <p class="text-muted m-0" [class.font-weight-bold]="checkITM(inv['opt_id'])">
+                                <p class="text-muted m-0">
                                     
                                     <span [className]="getOptionFromId(inv['opt_id'])['opt_type'] == 'CE'?'text-success': 'text-danger'">
                                         {{getOptionFromId(inv['opt_id'])['opt_type']}}
@@ -597,7 +642,7 @@
                                     >
                                     {{ roundFloat(getOptionFromId(inv['opt_id'])['opt_last_price_live'] * inv.total_qty - inv.total_cost_price) }} 
                                     <p class="percent m-0" [class.text-success]="getProfit(inv) >0" [class.text-danger]="getOptionFromId(inv['opt_id'])['opt_last_price_live'] * inv.total_qty - inv.total_cost_price <=0">
-                                        {{roundFloat(getProfit(inv)* 100 / inv.total_cost_price)}}%
+                                        {{roundFloat(getProfit(inv)* 100 / inv.total_cost_price)}}% | {{roundFloat(getProfit(inv)/inv.total_qty)}}
                                     </p>
                                 </td>
                             </ng-container>
@@ -645,7 +690,7 @@
                         </span>
                     </ng-template>
                     <div class="card shadow " style="height: 72vh; overflow-y: auto;">
-                        <table mat-table [dataSource]="filterInv(optionsInvs, 'SOLD')" class="mat-elevation-z8 w-100 shadow">
+                        <table mat-table [dataSource]="filterInv(optionsInvs, 'SOLD') | sort: 'sell_date': true" class="mat-elevation-z8 w-100 shadow">
 
                             <ng-container matColumnDef="optionName">
                                 <th mat-header-cell *matHeaderCellDef>Option</th>
@@ -678,6 +723,7 @@
                                     >
                                     {{roundFloat(inv.total_qty)}}
                                     <p class="text-muted m-0">
+                                        {{inv.buy_date}} |
                                         {{inv.sell_date}}
                                     </p>
                                 </td>

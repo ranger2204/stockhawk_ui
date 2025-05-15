@@ -4,7 +4,7 @@ import { StockService } from '../../services/stock.service';
 import * as Highcharts from 'highcharts';
 import {MatSnackBar} from '@angular/material/snack-bar';
 import { MatDialog, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
-import { ToastrService} from 'ngx-toastr';
+import { ToastContainerDirective, ToastrService} from 'ngx-toastr';
 import { Stock } from '../analytics/analytics.component';
 import { Investment } from '../../models/Investment';
 import { MatTabChangeEvent } from '@angular/material/tabs/tab-group';
@@ -12,6 +12,7 @@ import { Container } from '@angular/compiler/src/i18n/i18n_ast';
 import { FilterPipe } from '../../pipes/filter.pipe'; 
 import { DialogData, DialogNewPF } from '../virtual-market/virtual-market.component';
 import { PortfolioService } from 'src/app/services/portfolio.service';
+import { ArrayDataSource } from '@angular/cdk/collections';
 
 
 export const colorBL = "green"
@@ -21,6 +22,9 @@ export const colorST = "violet"
 export const colorMacd = "#3498DB"
 export const colorMacdSignal = "#EC7063"
 export const colorMacdHist = '#40E0D0'
+
+
+let structuredClone = (val) => JSON.parse(JSON.stringify(val))
 
 export class Modal {
   public modalTitle: string;
@@ -75,6 +79,8 @@ export class OptionsComponent implements OnInit {
 
   aoFilterValue=""
   aoFilterTO:any | undefined = undefined
+  aoSortAttrib:string = "date";
+  aoSortOrd: boolean = true;
   filteredAO:any[] = []
 
   optBetTO: number | undefined = undefined;
@@ -82,14 +88,17 @@ export class OptionsComponent implements OnInit {
   livePriceInterval: number | undefined = undefined
 
   totalInvestment = 0
+  currentValue = 0
   unrealPL = 0
   unrealP = 0
   realPL = 0
   realPLD = 0
+  realPLS = 0
   projProfits:any = {};
 
   portfolios: any[] = [];
-  optTypes: string[] = []
+  optTypes: any[] = []
+  optTypesBet: any[] = [];
   
   today = new FormControl(new Date())
 
@@ -123,11 +132,13 @@ export class OptionsComponent implements OnInit {
     this.unrealP = 0
     this.realPL = 0
     this.realPLD = 0
+    this.realPLS = 0;
   }
 
   isExpired(option) {
-    let date = Date.parse(option.opt_expiry_date)
-    return date <= Date.now()
+    let date = Date.parse(option.opt_expiry_date+' 23:59:59')
+    // console.log(date)
+    return date < Date.now()
   }
 
   removeAPF() {
@@ -135,6 +146,10 @@ export class OptionsComponent implements OnInit {
       // console.log("Delete Successful!")
       this.getLatestPFs()
     })
+  }
+
+  getAbs(num: number) {
+    return Math.abs(num)
   }
 
   async getLatestPFs() {
@@ -216,16 +231,19 @@ export class OptionsComponent implements OnInit {
     console.log(row)
   }
 
-  updateStats(enableAlert=true) {
+  updateStats(enableAlert=false) {
     let prevunRealPL = this.unrealPL
     this.totalInvestment = 0
+    this.currentValue = 0
     this.unrealPL = 0
     this.unrealP = 0
     this.realPL = 0
     this.realPLD = 0
+    this.realPLS = 0
 
     this.filterInv(this.optionsInvs, 'HOLD').forEach(item => {
       this.totalInvestment += item.total_cost_price
+      this.currentValue += this.getOptionFromId(item.opt_id)['opt_last_price_live']*item.total_qty
       let d = this.getOptionFromId(item.opt_id)['opt_last_price_live']*item.total_qty - item.total_cost_price
       this.unrealPL += d
       if(d > 0)
@@ -233,34 +251,75 @@ export class OptionsComponent implements OnInit {
     })
 
 
-
+    let expirySet = new Set<Date>()
     this.filterInv(this.optionsInvs, 'SOLD').forEach(item => {
       this.realPL += item.total_sell_price - item.total_cost_price
       let date = new Date(item.sell_date)
       if(date.setHours(0,0,0,0) == this.today.value.setHours(0,0,0,0))
         this.realPLD += item.total_sell_price - item.total_cost_price
+      let option = this.getOptionFromId(item.opt_id)
+      expirySet.add(new Date(option.opt_expiry_date))
+    })
+    let expiryArray: Date[] = Array.from(expirySet)
+
+    expiryArray.sort((a,b) => {
+      return (new Date(a)).getTime() - (new Date(b)).getTime()
+    })
+    let firstLowExpiry: Date;
+    for(let i=expiryArray.length-1; i>=0; i--) {
+      let curDate: Date = expiryArray[i]
+      if(curDate.setHours(0,0,0,0) < this.today.value.setHours(0,0,0,0)) {
+        firstLowExpiry = curDate;
+        break
+      }
+    }
+    // console.log(firstLowExpiry)
+
+    this.filterInv(this.optionsInvs, 'SOLD').forEach(item => {
+      let date = new Date(item.sell_date)
+      if(date.setHours(0,0,0,0) > firstLowExpiry.setHours(0,0,0,0)) {
+        let pl = item.total_sell_price - item.total_cost_price
+        this.realPLS += pl
+        // console.log(pl)
+      }
     })
 
     let diff = this.unrealPL - prevunRealPL
 
-    if(prevunRealPL != 0 && Math.abs(diff) >= 3000 && enableAlert) {
+
+    if(prevunRealPL != 0 && Math.abs(diff) >= 3000 && enableAlert === true) {
+      // console.log(enableAlert)
       let sym = diff < 0 ? "-₹": "₹"
-      this.toastr.info(
-        "Value Change : "+sym+Math.abs(diff), 
-        "Porfolio Alert ("+(new Date()).toTimeString()+')', 
-        {
-          disableTimeOut: true
-        }
-      )
+      if(diff >= 0)
+        this.toastr.info(
+          "Value Change : "+sym+this.roundFloat(diff), 
+          "Porfolio Alert ("+(new Date()).toTimeString().substring(0, 8)+')', 
+          {
+            disableTimeOut: true
+          }
+        )
+      else
+        this.toastr.warning(
+          "Value Change : "+sym+this.roundFloat(diff), 
+          "Porfolio Alert ("+(new Date()).toTimeString().substring(0, 8)+')', 
+          {
+            disableTimeOut: true
+          }
+        )
       console.log("BEEEEEEEEEEEEEEEEP! " + diff)
       // /home/ranger/Projects/eyestock/EyeStock_UI/src/app/components/options/options.component.ts
-      this.playBeep()
+      this.playBeep("alert")
     }
 
   }
 
-  playBeep() {
-    let audio = new Audio('../../../../assets/elevator-chimenotification-ding-recreation-287560.mp3');
+  playBeep(sType="alert") {
+    let soundTypes = {
+      'alert': '../../../../assets/elevator-chimenotification-ding-recreation-287560.mp3',
+      // 'notify': '../../../../assets/notification-2-269292.mp3'
+      'notify': '../../../../assets/tap-notification-180637.mp3'
+    }
+    let audio = new Audio(soundTypes[sType]);
     audio.play();
   }
 
@@ -438,22 +497,24 @@ export class OptionsComponent implements OnInit {
     this.expiredFlag = checked
     // this.getAllOptions()
   }
+  
 
-  updateOptionType(checked, opt_type) {
-    let index = this.optTypes.indexOf(opt_type)
-    let optTypes = JSON.parse(JSON.stringify(this.optTypes))
-    // console.log(index)
+  updateOptionType(checked, opt_type, type: string) {
+    let container = type === 'ao'? structuredClone(this.optTypes): structuredClone(this.optTypesBet)
+
+    // let optTypes = JSON.parse(JSON.stringify(container))
     if(!checked) {
-      if(index !== -1) {
-        optTypes.splice(index, 1)
-      }
+      let index = container.indexOf(opt_type)
+      container.splice(index, 1)
     }
     else {
-      if(index === -1)
-        optTypes.push(opt_type)
+        container.push(opt_type)
     }
-    this.optTypes = optTypes
-    // console.log(this.optTypes)
+    if(type === 'ao')
+      this.optTypes = container
+    else
+      this.optTypesBet = container
+
   }
 
   setSellInv(inv) {
@@ -909,7 +970,15 @@ export class OptionsComponent implements OnInit {
     }
 
     const getLive = async (enableAlert=true) => {
-      console.log("getLive all options")
+      let options:any = {
+        closeButton: true,
+        disableTimeOut: 'extendedTimeOut',
+        extendedTimeOut: 60*1000,
+        enableHtml: true,
+        progressBar: true
+      }
+
+      // console.log("getLive all options")
       let date = new Date()
       // can have stock for multiple types and strike prices; marking to avoid reload for the same stock
 
@@ -967,22 +1036,65 @@ export class OptionsComponent implements OnInit {
       stockIds.forEach(stockId => {
         if(Object.keys(stkData).indexOf(stockId) >= 0) {
           let stock = this.getStockFromId(stockId)
+          let diff = stkData[stockId]['price_history'].slice(-1)[0].stock_price_close - stock.stock_current_price_live
+            if (Math.abs(diff) >= 0.75 && enableAlert) {
+              if (diff >= 0)
+                this.toastr.info(
+                  stock.stock_name + " | Value Change : " + this.roundFloat(diff) + " | New Price : " + stkData[stockId]['price_history'].slice(-1)[0].stock_price_close, 
+                  "Stock Alert ("+(new Date()).toTimeString().substring(0, 8)+')', 
+                  options
+                )
+              else
+                this.toastr.warning(
+                  stock.stock_name + " | Value Change : " + this.roundFloat(diff) + " | New Price : " + stkData[stockId]['price_history'].slice(-1)[0].stock_price_close, 
+                  "Stock Alert ("+(new Date()).toTimeString().substring(0, 8)+')', 
+                  options
+                )
+              // this.playBeep("notify")
+            }
+
           stock.stock_current_price_live = stkData[stockId]['price_history'].slice(-1)[0].stock_price_close
           // console.log("updating stock : "+stockId)
         }
       })
+      // #TODO check latest time in the stk data and options data and alert user
+
       // stockIds.forEach(stockId => {
       //   this.prevPrices[stockId] = stkData[stockId]['price_history'].map(item => item.stock_price_close)
       // })
 
       let optData = optResp['data']
+      
+
+      let getOptId = (option: any) => {
+        return option.opt_symbol+ " " + option.opt_type+ " " + option.opt_strike_price + " " + option.opt_expiry_date
+      }
       // console.log(optData)
       optIds.forEach(optId => {
         let option = this.getOptionFromId(optId)
         // console.log("checking : "+optId+" : "+typeof(optId))
         try {
           if(optData[optId].length > 0) {
+            //alert user with the opt price change
+            let diff = optData[option.opt_id].slice(-1)[0].opt_ph_last - option.opt_last_price_live
+            if (Math.abs(diff) >= 0.3 && enableAlert) {
+              if (diff >= 0)
+                this.toastr.info(
+                  getOptId(option) + " | Value Change : " + this.roundFloat(diff) + " | New Price : " + optData[option.opt_id].slice(-1)[0].opt_ph_last, 
+                  "Option Alert ("+(new Date()).toTimeString().substring(0, 8)+')', 
+                  options
+                )
+              else
+                this.toastr.warning(
+                  getOptId(option) + " | Value Change : " + this.roundFloat(diff) + " | New Price : " + optData[option.opt_id].slice(-1)[0].opt_ph_last, 
+                  "Option Alert ("+(new Date()).toTimeString().substring(0, 8)+')', 
+                  options
+                )
+              // this.playBeep("notify")
+            }
+
             option.opt_last_price_live = optData[option.opt_id].slice(-1)[0].opt_ph_last
+            
             if(optId === this.currentActiveOption.opt_id) {
               this.updateCurrentLive(optId, optData[optId], stkData[this.currentActiveOption.opt_stock_id])
             }
@@ -1010,7 +1122,7 @@ export class OptionsComponent implements OnInit {
       }
   
     }
-    getLive(true)
+    getLive(false)
     if(this.isMarketHours())
       this.liveTO = setInterval(getLive, 12*1000)
   }
@@ -1074,7 +1186,7 @@ export class OptionsComponent implements OnInit {
   isMarketHours() {
     const now = new Date();
 
-    if(now.getDay() == 6 || now.getDay() == 7)
+    if(now.getDay() == 6 || now.getDay() == 0)
       return false
     
     // Define start time (9:15 AM)
@@ -1176,8 +1288,8 @@ export class OptionsComponent implements OnInit {
   async getAllOptions(enableAlert=false) {
     let data = await this.stockService.fetchAllOptions().toPromise()
     this.activeOptions = data['data']
-    this.filterActiveOptions(this.activeOptions, this.aoFilterValue)
-    // console.table(this.activeOptions)
+    // this.filterActiveOptions(this.activeOptions, this.aoFilterValue)
+    console.table(this.activeOptions)
     if(this.currentActiveOption === undefined) {
       this.currentActiveOption = this.activeOptions[0]
       this.getHistoricData(this.currentActiveOption)
