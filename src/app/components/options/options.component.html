@@ -83,15 +83,7 @@
         </div>
         <div class="col-5">
             <table class="table table-sm table-borderless m-0 float-left p-0 font-weight-light" style="font-size: small;">
-                <tr style="font-size:small;">
-                    <td>Total Inv.</td>
-                    <td>Cur Value</td>
-                    <td>Unreal. P/L</td>
-                    <td>Unreal. P</td>
-                    <td>Real. P/L</td>
-                    <td>Real. P/L (Day)</td>
-                    <td>Real. P/L (Session)</td>
-                </tr>
+                
                 <tr style="font-size:medium;">
                     <td>
                         ₹ {{roundFloat(totalInvestment)}}
@@ -115,6 +107,15 @@
                     <td>₹ {{roundFloat(realPLD)}}</td>
                     <td>₹ {{roundFloat(realPLS)}}</td>
 
+                </tr>
+                <tr style="font-size:small;">
+                    <td>Total Inv.</td>
+                    <td>Cur Value</td>
+                    <td>Unreal. P/L</td>
+                    <td>Unreal. P</td>
+                    <td>Real. P/L</td>
+                    <td>Real. P/L (Day)</td>
+                    <td>Real. P/L (Session)</td>
                 </tr>
             </table>
         </div>
@@ -541,9 +542,9 @@
                 <div class="col-12">
                     <mat-tab-group mat-stretch-tabs="false" mat-align-tabs="start" (selectedTabChange)="updateCharts($event)">
                         <mat-tab label="Live Data" style="height: 400px;">
-                            <div *ngIf="currentActiveOption" class="card shadow " id="option-live-data"></div>
-                            <div *ngIf="currentActiveOption" class="card shadow  mt-1"  id="stock-live-data"></div>
-                            <div *ngIf="currentActiveOption" class="card shadow  mt-1"  id="stock-live-data-macd"></div>
+                            <div *ngIf="currentActiveOption" class="card shadow border border-2" [class.border-danger]="getTimeDiff(curTime, lastLiveOptionUpdateTime) > 120" id="option-live-data"></div>
+                            <div *ngIf="currentActiveOption" class="card shadow border border-2 mt-1" [class.border-danger]="getTimeDiff(curTime, lastLiveStockUpdateTime) > 120"  id="stock-live-data"></div>
+                            <div *ngIf="currentActiveOption" class="card shadow border border-2 mt-1" [class.border-danger]="getTimeDiff(curTime, lastLiveStockUpdateTime) > 120"  id="stock-live-data-macd"></div>
                             
                         </mat-tab>
                         <mat-tab label="Historic Data" style="height: 400px;">

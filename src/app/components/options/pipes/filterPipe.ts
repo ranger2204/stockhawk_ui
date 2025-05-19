@@ -19,7 +19,7 @@ export class FilterObjectByExpiryPipe implements PipeTransform {
     transform(options: any[], check: boolean): any[] {
         if (check)
             return options
-        return options.filter(option => !(Date.parse(option.opt_expiry_date) < Date.now()))
+        return options.filter(option => !(Date.parse(option.opt_expiry_date+' 23:59:59') < Date.now()))
     }
 }
 

@@ -101,6 +101,10 @@ export class OptionsComponent implements OnInit {
   optTypesBet: any[] = [];
   
   today = new FormControl(new Date())
+  curTime = new Date()
+
+  lastLiveOptionUpdateTime = new Date()
+  lastLiveStockUpdateTime = new Date()
 
   txColumns = ['alert', 'optionName', 'qty', 'buyPrice', 'nowPrice', 'P/L', 'action']
   txSellColumns = ['optionName', 'qty', 'buyPrice', 'sellPrice', 'P/L', 'CP/L', 'action']
@@ -133,6 +137,12 @@ export class OptionsComponent implements OnInit {
     this.realPL = 0
     this.realPLD = 0
     this.realPLS = 0;
+  }
+
+  getTimeDiff(d1: Date, d2: Date) {
+    let d = Math.abs(d1.getTime() - d2.getTime())
+    // console.log(d)
+    return d
   }
 
   isExpired(option) {
@@ -292,7 +302,7 @@ export class OptionsComponent implements OnInit {
       let sym = diff < 0 ? "-₹": "₹"
       if(diff >= 0)
         this.toastr.info(
-          "Value Change : "+sym+this.roundFloat(diff), 
+          `Value Change : ${sym} ${this.roundFloat(diff)} | New Value : ₹ ${this.roundFloat(this.unrealPL)}`,
           "Porfolio Alert ("+(new Date()).toTimeString().substring(0, 8)+')', 
           {
             disableTimeOut: true
@@ -300,7 +310,7 @@ export class OptionsComponent implements OnInit {
         )
       else
         this.toastr.warning(
-          "Value Change : "+sym+this.roundFloat(diff), 
+          `Value Change : ${sym} ${this.roundFloat(diff)} | New Value : ₹${this.roundFloat(this.unrealPL)}`,
           "Porfolio Alert ("+(new Date()).toTimeString().substring(0, 8)+')', 
           {
             disableTimeOut: true
@@ -867,6 +877,8 @@ export class OptionsComponent implements OnInit {
 
   async updateCurrentLive(optId, optData:any[]=[], stockData:any[]=[]) {
 
+    this.curTime = new Date()
+
     let option = this.activeOptions.filter(option => option.opt_id === optId)[0]
     let stock = this.getStockFromId(option.opt_stock_id)
 
@@ -884,17 +896,27 @@ export class OptionsComponent implements OnInit {
 
     
     let {priceVolume, maxVolume} = this.getStockChartData(stockData)
+    let delta = 6*60*60*1000 - 30*60*1000
+    let updateTimeObj = new Date(priceVolume[0]['data'][priceVolume[0]['data'].length - 1][0] - delta)
+    this.lastLiveStockUpdateTime = updateTimeObj
+
+    let updateTime = updateTimeObj.toLocaleString('en-US', { timeZoneName: 'short' }).substring(0, 22)
     // console.table(priceVolume[0]['data'])
     if(document.getElementById("stock-live-data")) {
       // console.log(this.currentActiveOption.opt_stock_id, stock.stock_id)
       let priceVolumeWOMACD = priceVolume.filter(item => item.name.indexOf('MACD') === -1)
       let priceVolumeWMACD = priceVolume.filter(item => item.name.indexOf('MACD') !== -1 || item.name === 'Volume')
-      this.drawPriceHistory(priceVolumeWOMACD, maxVolume, stock.stock_name + " (Live)", "stock-live-data");
-      this.drawPriceHistory(priceVolumeWMACD, maxVolume, stock.stock_name + " (Live MACD)", "stock-live-data-macd");
+      this.drawPriceHistory(priceVolumeWOMACD, maxVolume, `${stock.stock_name} (Live) ${updateTime}`, "stock-live-data");
+      this.drawPriceHistory(priceVolumeWMACD, maxVolume, `${stock.stock_name} (Live MACD) ${updateTime}`, "stock-live-data-macd");
 
     }
     
     let {optPriceVolume, optMaxVolume} = this.getOptionChartData(optData)
+
+    let updateTimeOptionObj = new Date(optPriceVolume[0]['data'][optPriceVolume[0]['data'].length - 1][0] - delta)
+    this.lastLiveOptionUpdateTime = updateTimeOptionObj
+    let updateTimeOption = updateTimeOptionObj.toLocaleString('en-US', { timeZoneName: 'short' }).substring(0, 22)
+    
     
     let op_latest_price = optPriceVolume[0]['data'].slice(-1)[0][1]
     let stk_latest_price = priceVolume[0]['data'].slice(-1)[0][1]
@@ -930,7 +952,7 @@ export class OptionsComponent implements OnInit {
     optPriceVolume.push(pBHData)
 
     if(document.getElementById("option-live-data")) {
-      this.drawPriceHistory(optPriceVolume, optMaxVolume, `LIVE ${this.currentActiveOption.opt_symbol} ${this.currentActiveOption.opt_type} ${this.currentActiveOption.opt_strike_price} ${this.currentActiveOption.opt_expiry_date}`, "option-live-data");
+      this.drawPriceHistory(optPriceVolume, optMaxVolume, `LIVE ${this.currentActiveOption.opt_symbol} ${this.currentActiveOption.opt_type} ${this.currentActiveOption.opt_strike_price} ${this.currentActiveOption.opt_expiry_date} ${updateTimeOption}`, "option-live-data");
     }
     // console.table(data['data'])
     option.opt_last_price_live = optData.slice(-1)[0].opt_ph_last
