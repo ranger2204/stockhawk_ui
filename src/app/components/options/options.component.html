@@ -616,7 +616,7 @@
                                     >
                                     {{roundFloat(inv.total_qty)}}
                                     <p class="text-muted m-0">
-                                        {{inv.buy_date}}
+                                        {{inv.buy_date}} | {{getDaysElapsed(inv.buy_date)}}d
                                     </p>
                                 </td>
                                 </ng-container>

@@ -551,6 +551,11 @@ export class OptionsComponent implements OnInit {
     // console.log(this.events)
   }
 
+  getDaysElapsed(dateStr) {
+    let start = new Date(dateStr)
+    return Math.floor((Date.now() - start.getTime()) / (24*60*60*1000))
+  }
+
   hasEvent(stockId) {
     let stockEvents = []
     let events = Object.keys(this.events)
