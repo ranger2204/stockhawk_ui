@@ -185,6 +185,9 @@
                                         <span  style="width: 40px;" [className]="getStockFromId(option['opt_stock_id'])['stock_current_price_live'] > getStockFromId(option['opt_stock_id'])['stock_current_price'] ? 'badge  p-1 badge-success': 'badge  p-1 badge-danger'">
                                             {{getStockFromId(option['opt_stock_id'])['stock_current_price_live']}}
                                         </span>
+                                        <span class="badge badge-warning" style="font-size: smaller;" *ngIf="getLen(hasEvent(option['opt_stock_id'])) > 0" title="{{hasEvent(option['opt_stock_id'])}}">
+                                            E
+                                        </span>
                                         <div style="font-size: smaller;">
                                             <span class="text-warning">
                                                 {{option['opt_mkt_lot']}}
@@ -207,7 +210,7 @@
                                             {{roundFloat(getStockFromId(option['opt_stock_id'])['stock_current_price_live'] - option['opt_strike_price'])}}
                                         </span>
                                         
-                                        <span style="width: 40px;" [className]="option['opt_last_price_live'] > option['opt_last_price'] ? 'badge  p-1 badge-success rounded-0': 'badge  p-1 badge-danger rounded-0'" title="{{option['opt_last_price_live'] - option['opt_last_price']}}">
+                                        <span style="width: 40px;" [className]="option['opt_last_price_live'] > option['opt_last_price'] ? 'badge  p-1 badge-success rounded-0': 'badge  p-1 badge-danger rounded-0'" title="{{roundFloat(option['opt_last_price_live'] - option['opt_last_price'])}}">
                                             {{option['opt_last_price_live']}}
                                         </span>
                                         <span style="width: 40px;" class="badge badge-light">
@@ -591,6 +594,9 @@
                                 <span style="width: 40px;" [className]="getStockFromId(getOptionFromId(inv['opt_id'])['opt_stock_id'])['stock_current_price_live'] > getStockFromId(getOptionFromId(inv['opt_id'])['opt_stock_id'])['stock_current_price'] ? 'badge  p-1 badge-success': 'badge  p-1 badge-danger'" title="{{roundFloat(getStockFromId(getOptionFromId(inv['opt_id'])['opt_stock_id'])['stock_current_price_live'] - getStockFromId(getOptionFromId(inv['opt_id'])['opt_stock_id'])['stock_current_price'])}}">
                                     {{getStockFromId(getOptionFromId(inv['opt_id'])['opt_stock_id'])['stock_current_price_live']}}
                                 </span>
+                                <span class="badge badge-warning" style="font-size: smaller;" *ngIf="getLen(hasEvent(getOptionFromId(inv['opt_id'])['opt_stock_id'])) > 0" title="{{hasEvent(getOptionFromId(inv['opt_id'])['opt_stock_id'])}}">
+                                    E
+                                </span>
                                 <p class="text-muted m-0">
                                     
                                     <span [className]="getOptionFromId(inv['opt_id'])['opt_type'] == 'CE'?'text-success': 'text-danger'">
@@ -703,6 +709,9 @@
                                 </a>  
                                 <span style="width: 40px;" [className]="getStockFromId(getOptionFromId(inv['opt_id'])['opt_stock_id'])['stock_current_price_live'] > getStockFromId(getOptionFromId(inv['opt_id'])['opt_stock_id'])['stock_current_price'] ? 'badge  p-1 badge-success': 'badge  p-1 badge-danger'" title="{{getStockFromId(getOptionFromId(inv['opt_id'])['opt_stock_id'])['stock_current_price_live'] - getStockFromId(getOptionFromId(inv['opt_id'])['opt_stock_id'])['stock_current_price']}}">
                                     {{getStockFromId(getOptionFromId(inv['opt_id'])['opt_stock_id'])['stock_current_price_live']}}
+                                </span>
+                                <span class="badge badge-warning" style="font-size: smaller;" *ngIf="getLen(hasEvent(getOptionFromId(inv['opt_id'])['opt_stock_id'])) > 0" title="{{hasEvent(getOptionFromId(inv['opt_id'])['opt_stock_id'])}}">
+                                    E
                                 </span>
                                 <!-- <span class="badge badge-info  p-1">
                                     {{getStockFromId(getOptionFromId(inv['opt_id'])['opt_stock_id'])['stock_current_price_live']}}

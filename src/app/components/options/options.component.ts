@@ -13,6 +13,7 @@ import { FilterPipe } from '../../pipes/filter.pipe';
 import { DialogData, DialogNewPF } from '../virtual-market/virtual-market.component';
 import { PortfolioService } from 'src/app/services/portfolio.service';
 import { ArrayDataSource } from '@angular/cdk/collections';
+import { CdkTable } from '@angular/cdk/table';
 
 
 export const colorBL = "green"
@@ -110,6 +111,7 @@ export class OptionsComponent implements OnInit {
   txSellColumns = ['optionName', 'qty', 'buyPrice', 'sellPrice', 'P/L', 'CP/L', 'action']
 
   activeStocks: any[] = []
+  events = {}
 
   constructor(
     private stockService: StockService,
@@ -125,6 +127,7 @@ export class OptionsComponent implements OnInit {
     await this.getAllStocks()
     await this.getLatestPFs()
     await this.getAllOptions()
+    this.getEvents()
     this.getOptionBets()
 
     
@@ -142,7 +145,7 @@ export class OptionsComponent implements OnInit {
   getTimeDiff(d1: Date, d2: Date) {
     let d = Math.abs(d1.getTime() - d2.getTime())
     // console.log(d)
-    return d
+    return d/1000
   }
 
   isExpired(option) {
@@ -527,6 +530,39 @@ export class OptionsComponent implements OnInit {
 
   }
 
+  async getEvents() {
+    let stockIds = new Set<Number>()
+    this.activeOptions.forEach(option => {
+      stockIds.add(option.opt_stock_id)
+    })
+    let stockIdAsList = Array.from(stockIds.values())
+    let [agms, divs, bms] = await Promise.all([
+      this.stockService.getAGMforStocks(stockIdAsList).toPromise(),
+      this.stockService.getDividendForStocks(stockIdAsList).toPromise(),
+      this.stockService.getBMforStocks(stockIdAsList).toPromise(),
+    ])
+
+    this.events = {
+      "agm": agms['agm'].map(agm => agm.agm_stock_id),
+      "bm": bms['bm'].map(bm => bm.bm_stock_id),
+      "div": divs['dividends'].map(div => div.div_stock_id)
+    }
+
+    // console.log(this.events)
+  }
+
+  hasEvent(stockId) {
+    let stockEvents = []
+    let events = Object.keys(this.events)
+    events.forEach(event => {
+      if(this.events[event].indexOf(Number.parseInt(stockId)) >= 0) {
+        stockEvents.push(event)
+      }
+    })
+    // console.log(stockEvents)
+    return stockEvents
+  }
+
   setSellInv(inv) {
     this.invToSell = inv
     this.invToSell.total_sell_price = Math.ceil(this.getOptionFromId(inv.opt_id)['opt_last_price_live'] * this.invToSell.total_qty)
@@ -900,14 +936,21 @@ export class OptionsComponent implements OnInit {
     let updateTimeObj = new Date(priceVolume[0]['data'][priceVolume[0]['data'].length - 1][0] - delta)
     this.lastLiveStockUpdateTime = updateTimeObj
 
+    if(this.getTimeDiff(this.curTime, this.lastLiveStockUpdateTime) > 120) {
+      this.toastr.error(
+        `Last update recieved at : ${this.lastLiveStockUpdateTime}`, 
+        "No Update Alert! - Stock"
+      )
+    }
+
     let updateTime = updateTimeObj.toLocaleString('en-US', { timeZoneName: 'short' }).substring(0, 22)
     // console.table(priceVolume[0]['data'])
     if(document.getElementById("stock-live-data")) {
       // console.log(this.currentActiveOption.opt_stock_id, stock.stock_id)
       let priceVolumeWOMACD = priceVolume.filter(item => item.name.indexOf('MACD') === -1)
       let priceVolumeWMACD = priceVolume.filter(item => item.name.indexOf('MACD') !== -1 || item.name === 'Volume')
-      this.drawPriceHistory(priceVolumeWOMACD, maxVolume, `${stock.stock_name} (Live) ${updateTime}`, "stock-live-data");
-      this.drawPriceHistory(priceVolumeWMACD, maxVolume, `${stock.stock_name} (Live MACD) ${updateTime}`, "stock-live-data-macd");
+      this.drawPriceHistory(priceVolumeWOMACD, maxVolume, `${stock.stock_name} (Live) - ${updateTime}`, "stock-live-data");
+      this.drawPriceHistory(priceVolumeWMACD, maxVolume, `${stock.stock_name} (Live MACD) - ${updateTime}`, "stock-live-data-macd");
 
     }
     
@@ -916,6 +959,13 @@ export class OptionsComponent implements OnInit {
     let updateTimeOptionObj = new Date(optPriceVolume[0]['data'][optPriceVolume[0]['data'].length - 1][0] - delta)
     this.lastLiveOptionUpdateTime = updateTimeOptionObj
     let updateTimeOption = updateTimeOptionObj.toLocaleString('en-US', { timeZoneName: 'short' }).substring(0, 22)
+
+    if(this.getTimeDiff(this.curTime, this.lastLiveOptionUpdateTime) > 120) {
+      this.toastr.error(
+        "Last update recieved at : "+this.lastLiveOptionUpdateTime, 
+        "No Update Alert! - Options"
+      )
+    }
     
     
     let op_latest_price = optPriceVolume[0]['data'].slice(-1)[0][1]
@@ -952,7 +1002,7 @@ export class OptionsComponent implements OnInit {
     optPriceVolume.push(pBHData)
 
     if(document.getElementById("option-live-data")) {
-      this.drawPriceHistory(optPriceVolume, optMaxVolume, `LIVE ${this.currentActiveOption.opt_symbol} ${this.currentActiveOption.opt_type} ${this.currentActiveOption.opt_strike_price} ${this.currentActiveOption.opt_expiry_date} ${updateTimeOption}`, "option-live-data");
+      this.drawPriceHistory(optPriceVolume, optMaxVolume, `LIVE ${this.currentActiveOption.opt_symbol} ${this.currentActiveOption.opt_type} ${this.currentActiveOption.opt_strike_price} ${this.currentActiveOption.opt_expiry_date} - ${updateTimeOption}`, "option-live-data");
     }
     // console.table(data['data'])
     option.opt_last_price_live = optData.slice(-1)[0].opt_ph_last
